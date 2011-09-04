@@ -1,0 +1,4 @@
+<twitter-timeline>
+   <pageSize>20</pageSize>
+   <checkInterval>300</checkInterval>
+</twitter-timeline>

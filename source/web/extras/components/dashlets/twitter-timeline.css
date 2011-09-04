@@ -1,0 +1,121 @@
+.twitter-timeline div.list
+{
+}
+.twitter-timeline div.detail-list-item
+{
+   min-height: 48px; /* No smaller that profile images */
+}
+.twitter-timeline h4, .twitter-timeline p
+{
+   margin-bottom: 0.25em;
+   margin-top: 0;
+   padding-top:0;
+}
+.twitter-timeline div.tweet-details
+{
+   color: #999999;
+   margin-bottom: 0.25em;
+}
+.twitter-timeline div.tweet-details a,
+.twitter-timeline div.tweet-details a:link,
+.twitter-timeline div.tweet-details a:hover,
+.twitter-timeline div.tweet-details a:visited
+{
+   color: #999999;
+}
+.twitter-timeline .list-tweet,
+.twitter-timeline .user-tweet
+{
+   clear: both;
+}
+.twitter-timeline .list-tweet .tweet,
+.twitter-timeline .user-tweet .tweet
+{
+	margin-left: 58px;
+}
+.twitter-timeline .list-tweet .user-icon,
+.twitter-timeline .user-tweet .user-icon
+{
+   float: left;
+}
+.twitter-timeline > .scrollableList
+{
+   padding-top: 0;
+}
+.twitter-timeline > .body div.timeline
+{
+   padding-left: 0;
+   padding-right: 0;
+}
+.twitter-timeline .buttons
+{
+	padding-top: 1em;
+	text-align: center;
+	display: none;
+}
+.twitter-timeline .screen-name
+{
+   font-weight: 700;
+}
+.twitter-timeline .user-name
+{
+   color: #999999;
+}
+.twitter-timeline .retweeted
+{
+   background-image: url("twitter-timeline-rt.png");
+   background-position: left;
+   background-repeat: no-repeat;
+   padding-left: 18px;
+   color: #999999;
+}
+.twitter-timeline .tweet-hd,
+.twitter-timeline .tweet-bd
+{
+   padding-bottom: 0.2em;
+}
+.twitter-timeline .msg
+{
+   padding-left: 8px;
+   padding-right: 8px;
+}
+.twitter-timeline .notifications
+{
+   background-color: #FFFBDD;
+   border-bottom: 1px solid #DDD6A0;
+   padding-top: 5px;
+   padding-bottom: 5px;
+   text-align: center;
+	display: none;
+	cursor: pointer;
+}
+.twitter-timeline .refresh
+{
+   background-image: url('refresh-icon.png');
+   background-repeat: no-repeat;
+   float: right;
+   height: 16px;
+   left: -8px;
+   position: relative;
+   top: -22px;
+   width: 16px;
+}
+.twitter-timeline .refresh a,
+.twitter-timeline .refresh a:active,
+.twitter-timeline .refresh a:hover
+{
+   display: block;
+   height: 16px;
+   text-decoration: none;
+   width: 16px;
+}
+.twitter-timeline-connect {
+	text-align: center;
+    background-color: #FFFBDD;
+    border-bottom: 1px solid #DDD6A0;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+.twitter-timeline-connect div {
+	margin-bottom: 1em;
+}

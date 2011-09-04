@@ -1,0 +1,6 @@
+<webscript>
+   <shortname>Twitter Timeline</shortname>
+   <description>Displays a Twitter timeline for an authenticated user</description>
+   <family>user-dashlet</family>
+   <url>/components/dashlets/twitter-timeline</url>
+</webscript>

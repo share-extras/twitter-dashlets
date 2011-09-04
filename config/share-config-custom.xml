@@ -1,0 +1,28 @@
+<alfresco-config>
+
+	<config evaluator="string-compare" condition="Remote">
+	  <remote>
+	    
+		<!-- Connector instance -->
+		<connector>
+			<id>twitter-oauth</id>
+			<name>Twitter OAuth Connector</name>
+			<description>Twitter connector with support for OAuth authentication</description>
+			<class>org.sharextras.webscripts.connector.HttpOAuthConnector</class>
+			<consumer-key>0YJmfeXTKWubRvdtFENg</consumer-key>
+			<consumer-secret>FvoMgnFFo1io6bClwnKM40kYY4JDNXIVZQKbbx4K8</consumer-secret>
+			<signature-method>HMAC-SHA1</signature-method>
+		</connector>
+	  
+		<!-- Endpoint -->
+	    <endpoint>
+	      <id>twitter-auth</id>
+	      <name>Twitter Authenticated API</name>
+	      <connector-id>twitter-oauth</connector-id>
+	      <endpoint-url>http://api.twitter.com</endpoint-url>
+	    </endpoint>
+	    
+	  </remote>
+	</config>
+
+</alfresco-config>
