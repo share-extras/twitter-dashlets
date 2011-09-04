@@ -1,85 +1,85 @@
-.twitter-timeline div.list
+.twitter-dashlet div.list
 {
 }
-.twitter-timeline div.detail-list-item
+.twitter-dashlet div.detail-list-item
 {
    min-height: 48px; /* No smaller that profile images */
 }
-.twitter-timeline h4, .twitter-timeline p
+.twitter-dashlet h4, .twitter-dashlet p
 {
    margin-bottom: 0.25em;
    margin-top: 0;
    padding-top:0;
 }
-.twitter-timeline div.tweet-details
+.twitter-dashlet div.tweet-details
 {
    color: #999999;
    margin-bottom: 0.25em;
 }
-.twitter-timeline div.tweet-details a,
-.twitter-timeline div.tweet-details a:link,
-.twitter-timeline div.tweet-details a:hover,
-.twitter-timeline div.tweet-details a:visited
+.twitter-dashlet div.tweet-details a,
+.twitter-dashlet div.tweet-details a:link,
+.twitter-dashlet div.tweet-details a:hover,
+.twitter-dashlet div.tweet-details a:visited
 {
    color: #999999;
 }
-.twitter-timeline .list-tweet,
-.twitter-timeline .user-tweet
+.twitter-dashlet .list-tweet,
+.twitter-dashlet .user-tweet
 {
    clear: both;
 }
-.twitter-timeline .list-tweet .tweet,
-.twitter-timeline .user-tweet .tweet
+.twitter-dashlet .list-tweet .tweet,
+.twitter-dashlet .user-tweet .tweet
 {
 	margin-left: 58px;
 }
-.twitter-timeline .list-tweet .user-icon,
-.twitter-timeline .user-tweet .user-icon
+.twitter-dashlet .list-tweet .user-icon,
+.twitter-dashlet .user-tweet .user-icon
 {
    float: left;
 }
-.twitter-timeline > .scrollableList
+.twitter-dashlet > .scrollableList
 {
    padding-top: 0;
 }
-.twitter-timeline > .body div.timeline
+.twitter-dashlet > .body div.timeline
 {
    padding-left: 0;
    padding-right: 0;
 }
-.twitter-timeline .buttons
+.twitter-dashlet .buttons
 {
 	padding-top: 1em;
 	text-align: center;
 	display: none;
 }
-.twitter-timeline .screen-name
+.twitter-dashlet .screen-name
 {
    font-weight: 700;
 }
-.twitter-timeline .user-name
+.twitter-dashlet .user-name
 {
    color: #999999;
 }
-.twitter-timeline .retweeted
+.twitter-dashlet .retweeted
 {
-   background-image: url("twitter-timeline-rt.png");
-   background-position: left;
+   background-image: url("twitter-spritev2-vertical.png");
+   background-position: 0px -96px;
    background-repeat: no-repeat;
    padding-left: 18px;
    color: #999999;
 }
-.twitter-timeline .tweet-hd,
-.twitter-timeline .tweet-bd
+.twitter-dashlet .tweet-hd,
+.twitter-dashlet .tweet-bd
 {
    padding-bottom: 0.2em;
 }
-.twitter-timeline .msg
+.twitter-dashlet .msg
 {
    padding-left: 8px;
    padding-right: 8px;
 }
-.twitter-timeline .notifications
+.twitter-dashlet .notifications
 {
    background-color: #FFFBDD;
    border-bottom: 1px solid #DDD6A0;
@@ -89,7 +89,7 @@
 	display: none;
 	cursor: pointer;
 }
-.twitter-timeline .refresh
+.twitter-dashlet .refresh
 {
    background-image: url('refresh-icon.png');
    background-repeat: no-repeat;
@@ -100,22 +100,22 @@
    top: -22px;
    width: 16px;
 }
-.twitter-timeline .refresh a,
-.twitter-timeline .refresh a:active,
-.twitter-timeline .refresh a:hover
+.twitter-dashlet .refresh a,
+.twitter-dashlet .refresh a:active,
+.twitter-dashlet .refresh a:hover
 {
    display: block;
    height: 16px;
    text-decoration: none;
    width: 16px;
 }
-.twitter-timeline-connect {
+.twitter-dashlet-connect {
 	text-align: center;
     background-color: #FFFBDD;
     border-bottom: 1px solid #DDD6A0;
     padding-top: 8px;
     padding-bottom: 8px;
 }
-.twitter-timeline-connect div {
+.twitter-dashlet-connect div {
 	margin-bottom: 1em;
 }

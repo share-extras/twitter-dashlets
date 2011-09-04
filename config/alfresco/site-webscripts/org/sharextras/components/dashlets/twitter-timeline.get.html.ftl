@@ -10,7 +10,7 @@
    new Alfresco.widget.DashletResizer("${args.htmlid}", "${instance.object.id}");
 //]]></script>
 
-<div class="dashlet twitter-timeline">
+<div class="dashlet twitter-dashlet twitter-timeline">
    <div class="title" id="${args.htmlid}-title">${msg("header.timeline")}</div>
    <div id="${args.htmlid}-body" class="body scrollableList" <#if args.height??>style="height: ${args.height}px;"</#if>>
       <div id="${args.htmlid}-notifications" class="notifications"></div>
