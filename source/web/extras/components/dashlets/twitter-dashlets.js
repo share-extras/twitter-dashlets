@@ -174,9 +174,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           // The dashlet title container
           this.title = Dom.get(this.id + "-title");
           
-          // Connect button
-          this.widgets.connect = Dom.get(this.id + "-connect");
-          
           // The new tweets notification container
           this.notifications = Dom.get(this.id + "-notifications");
           Event.addListener(this.notifications, "click", this.onShowNewClick, null, this);
@@ -189,19 +186,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                 onclick: {
                    fn: this.onMoreButtonClick,
                    obj: this.moreButton,
-                   scope: this
-                }
-             }
-          );
-          
-          // Set up the Connect button
-          this.widgets.connectButton = new YAHOO.widget.Button(
-             this.id + "-btn-connect",
-             {
-                disabled: true,
-                onclick: {
-                   fn: this.onConnectButtonClick,
-                   obj: this.widgets.connectButton,
                    scope: this
                 }
              }
@@ -684,6 +668,26 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onReady: function TwitterTimeline_onReady()
       {
           Extras.dashlet.TwitterTimeline.superclass.onReady.call(this);
+          
+          // Connect button
+          this.widgets.connect = Dom.get(this.id + "-connect");
+          
+          // Set up the Connect button
+          this.widgets.connectButton = new YAHOO.widget.Button(
+             this.id + "-btn-connect",
+             {
+                disabled: true,
+                onclick: {
+                   fn: this.onConnectButtonClick,
+                   obj: this.widgets.connectButton,
+                   scope: this
+                }
+             }
+          );
+          
+          // Utility links
+          this.widgets.utils = Dom.get(this.id + "-utils");
+          Event.addListener(this.id + "-link-disconnect", "click", this.onDisconnectClick, this, true);
          
          // TODO Check OAuth is supported and warn if not
          
@@ -792,10 +796,13 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       onAuthSuccess: function TwitterTimeline_onAuthSuccess()
       {
-          // TODO Wire this up with Bubbling, so multiple Yammer dashlets will work
+          // TODO Wire this up with Bubbling, so multiple dashlets will work
 
           // Remove the Connect information and button, if they are shown
           Dom.setStyle(this.widgets.connect, "display", "none");
+          
+          // Enable the Disconnect button
+          Dom.setStyle(this.widgets.utils, "display", "block");
           
           this.load();
       },
@@ -984,6 +991,51 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          {
              this.onAuthSuccess();
          }
+      },
+      
+      /**
+       * Click handler for Disconnect link
+       *
+       * @method onDisconnectClick
+       * @param e {object} HTML event
+       */
+      onDisconnectClick: function TwitterTimeline_onDisconnectClick(e, obj)
+      {
+         // Prevent default action
+         Event.stopEvent(e);
+         
+         var me = this;
+         
+         Alfresco.util.PopupManager.displayPrompt({
+             title: this.msg("title.disconnect"),
+             text: this.msg("label.disconnect"),
+             buttons: [
+                 {
+                     text: Alfresco.util.message("button.ok", this.name),
+                     handler: function Yammer_onDisconnectClick_okClick() {
+                         me.oAuth.clearCredentials();
+                         me.oAuth.saveCredentials();
+                         // Remove existing messages
+                         me.timeline.innerHTML = "";
+                         // Display the Connect information and button
+                         Dom.setStyle(me.widgets.connect, "display", "block");
+                         // Enable the Connect button
+                         me.widgets.connectButton.set("disabled", false);
+                         // Disable the Disconnect button and More button
+                         Dom.setStyle(me.widgets.utils, "display", "none");
+                         Dom.setStyle(me.id + "-buttons", "display", "none");
+                         this.destroy();
+                     },
+                     isDefault: true
+                 },
+                 {
+                     text: Alfresco.util.message("button.cancel", this.name),
+                     handler: function Yammer_onDisconnectClick_cancelClick() {
+                         this.destroy();
+                     }
+                 }
+             ]
+         });
       }
       
    });

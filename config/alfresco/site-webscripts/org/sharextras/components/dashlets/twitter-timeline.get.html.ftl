@@ -20,5 +20,6 @@
  	   </div>
       <div id="${args.htmlid}-timeline" class="timeline"></div>
       <div id="${args.htmlid}-buttons" class="buttons"><input type="button" id="${args.htmlid}-btn-more" value="${msg('button.more')}" /></div>
+ 	   <div id="${args.htmlid}-utils" class="twitter-timeline-utils"><a id="${args.htmlid}-link-disconnect" class="theme-color-1" href="#">${msg('link.disconnect')}</a></div>
    </div>
 </div>

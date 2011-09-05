@@ -107,13 +107,19 @@
    text-decoration: none;
    width: 16px;
 }
-.twitter-dashlet-connect {
+.twitter-timeline-connect {
 	text-align: center;
     background-color: #FFFBDD;
     border-bottom: 1px solid #DDD6A0;
     padding-top: 8px;
     padding-bottom: 8px;
 }
-.twitter-dashlet-connect div {
+.twitter-timeline-connect div {
 	margin-bottom: 1em;
+}
+.twitter-timeline-utils {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    font-size: 90%;
+    display: none;
 }
