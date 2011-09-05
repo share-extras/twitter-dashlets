@@ -1,16 +1,25 @@
-Twitter Feed dashlet for Alfresco Share
-=======================================
+Twitter dashlets for Alfresco Share
+===================================
 
 Author: Will Abson
 
-This project defines a custom dashlet that displays the ten most recent Tweets
-of any Twitter user within the dashlet.
+This project provides three dashlets for interacting with Twitter via 
+Alfresco Share.
+
+The Twitter Feed dashlet displays recent Tweets belonging to any Twitter 
+user, or from any list belonging to a user, within the dashlet.
+
+The Twitter Search dashlet performs a search for a specific term or hashtag
+and displays Tweets matching that term in the dashlet.
+
+The Twitter Timeline dashlet allows the user to connect the dashlet to their
+Twitter account and view their own personal timeline.
 
 Installation
 ------------
 
-The dashlet has been developed to install on top of an existing Alfresco
-3.3 installation.
+The dashlets have been developed to install on top of an existing Alfresco
+3.3 or 3.4 installation.
 
 An Ant build script is provided to build a JAR file containing the 
 custom files, which can then be installed into the 'tomcat/shared/lib' folder 
@@ -21,7 +30,7 @@ directory.
 
     ant clean dist-jar
 
-The command should build a JAR file named twitter-feed-dashlet.jar
+The command should build a JAR file named twitter-dashlets.jar
 in the 'dist' directory within your project.
 
 To deploy the dashlet files into a local Tomcat instance for testing, you can 
@@ -38,4 +47,4 @@ Using the dashlet
 
 Log in to Alfresco Share and navigate to a site dashboard. Click the 
 Customize Dashboard button to edit the contents of the dashboard and drag 
-the dashlet into one of the columns from the list of dashlets.
+one of the dashlets into one of the columns.
