@@ -1,0 +1,5 @@
+<webscript>
+  <shortname>config-twitter-search</shortname>
+  <description>Configuration dialog for Twitter search dashlet</description>
+  <url>/extras/modules/dashlets/twitter-search/config</url>
+</webscript>

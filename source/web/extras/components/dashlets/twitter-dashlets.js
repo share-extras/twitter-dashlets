@@ -554,7 +554,7 @@
         */
        _refreshDates: function TwitterTimeline__refreshDates()
        {
-          var els = Dom.getElementsByClassName("tweet-date", "span", this.searchResults), dEl;
+          var els = Dom.getElementsByClassName("tweet-date", "span", this.timeline), dEl;
           for (var i = 0; i < els.length; i++)
           {
              dEl = els[i];
@@ -1254,6 +1254,312 @@
                actionUrl: actionUrl,
                twitterUser: this.options.twitterUser
             });
+         }
+         this.configDialog.show();
+      }
+      
+   });
+})();
+
+/**
+ * Twitter search dashlet.
+ * 
+ * @namespace Alfresco
+ * @class Alfresco.dashlet.TwitterSearch
+ */
+(function()
+{
+   /**
+    * YUI Library aliases
+    */
+   var Dom = YAHOO.util.Dom,
+      Event = YAHOO.util.Event;
+
+   /**
+    * Alfresco Slingshot aliases
+    */
+   var $html = Alfresco.util.encodeHTML,
+      $combine = Alfresco.util.combinePaths;
+
+   /**
+    * Dashboard TwitterSearch constructor.
+    * 
+    * @param {String} htmlId The HTML id of the parent element
+    * @return {Alfresco.dashlet.TwitterSearch} The new component instance
+    * @constructor
+    */
+   Alfresco.dashlet.TwitterSearch = function TwitterSearch_constructor(htmlId)
+   {
+      return Alfresco.dashlet.TwitterSearch.superclass.constructor.call(this, "Alfresco.dashlet.TwitterSearch", htmlId);
+   };
+
+   /**
+    * Extend from Alfresco.dashlet.TwitterBase and add class implementation
+    */
+   YAHOO.extend(Alfresco.dashlet.TwitterSearch, Alfresco.dashlet.TwitterBase,
+   {
+      /**
+       * Object container for initialization options
+       *
+       * @property options
+       * @type object
+       */
+      options: YAHOO.lang.merge(Alfresco.dashlet.TwitterBase.prototype.options,
+      {
+         /**
+          * Twitter search term
+          * 
+          * @property searchTerm
+          * @type string
+          * @default ""
+          */
+         searchTerm: "",
+
+         /**
+          * Default Twitter search term, if no specific search term is configured
+          * 
+          * @property defaultSearchTerm
+          * @type string
+          * @default ""
+          */
+         defaultSearchTerm: ""
+      }),
+
+      /**
+       * Fired by YUI when parent element is available for scripting
+       * @method onReady
+       */
+      onReady: function TwitterSearch_onReady()
+      {
+          Alfresco.dashlet.TwitterTimeline.superclass.onReady.call(this);
+         // Load the results
+         this.load();
+      },
+      
+      /**
+       * Search results loaded successfully
+       * 
+       * @method onLoadSuccess
+       * @param p_response {object} Response object from request
+       * @param p_obj {object} Custom object passed to function
+       */
+      onLoadSuccess: function TwitterSearch_onLoadSuccess(p_response, p_obj)
+      {
+         // Update the dashlet title
+         this.title.innerHTML = this.msg("header.search", encodeURIComponent(this._getSearchTerm()), this._getSearchTerm());
+         
+         var html = "", tweets;
+         
+         if (p_response.json)
+         {
+            tweets = p_response.json.results;
+            
+            if (tweets.length > 0)
+            {
+               html += this._generateTweetsHTML(tweets);
+            }
+            else
+            {
+               html += "<div class=\"msg\">\n";
+               html += "<span>\n";
+               html += this.msg("label.noTweets");
+               html += "</span>\n";
+               html += "</div>\n";
+            }
+         }
+         
+         this.timeline.innerHTML = html;
+         
+         // Empty the new tweets cache and remove any notification
+         this.newTweets = [];
+         this._refreshNotification();
+         
+         // Enable the Load More button
+         this.moreButton.set("disabled", false);
+         Dom.setStyle(this.id + "-buttons", "display", "block");
+         
+         // Start the timer to poll for new tweets, if enabled
+         this._resetTimer();
+      },
+
+      /**
+       * Search results load failed
+       * 
+       * @method onLoadFailure
+       * @param p_response {object} Response object from request
+       * @param p_obj {object} Custom object passed to function
+       */
+      onLoadFailure: function TwitterSearch_onLoadFailure(p_response, p_obj)
+      {
+         // Update the dashlet title
+         this.title.innerHTML = this.msg("header.search", encodeURIComponent(this._getSearchTerm()), this._getSearchTerm());
+         
+         // Update the content
+         this.timeline.innerHTML = "<div class=\"msg\">" + this.msg("label.error") + "</div>";
+         
+         // Disable the Load More button
+         this.moreButton.set("disabled", true);
+         Dom.setStyle(this.id + "-buttons", "display", "none");
+      },
+      
+      /**
+       * Extended timeline loaded successfully
+       * 
+       * @method onExtensionLoaded
+       * @param p_response {object} Response object from request
+       * @param p_obj {object} Custom object passed to function
+       */
+      onExtensionLoaded: function TwitterSearch_onExtensionLoaded(p_response, p_obj)
+      {
+         this._refreshDates(); // Refresh existing dates
+         this.timeline.innerHTML += this._generateTweetsHTML(p_response.json.results.slice(1)); // Do not include duplicate tweet
+         this.moreButton.set("disabled", false);
+      },
+      
+      /**
+       * PRIVATE FUNCTIONS
+       */
+      
+      /**
+       * Generate HTML markup for a single Tweet
+       * 
+       * @method _generateTweetHTML
+       * @private
+       * @param t {object} Tweet object to render into HTML
+       * @param rt {object} Retweet object, if the Tweet has been RT'ed
+       * @return {string} HTML markup
+       */
+      _generateTweetHTML: function TwitterSearch__generateTweetHTML(t, rt)
+      {
+         var html = "", 
+            profileUri = "http://twitter.com/" + encodeURIComponent(t.from_user),
+            userLink = "<a href=\"" + profileUri + "\" title=\"" + $html(t.from_user) + "\" class=\"theme-color-1\">" + $html(t.from_user) + "</a>",
+            postedRe = /([A-Za-z]{3}) ([A-Za-z]{3}) ([0-9]{2}) ([0-9]{2}:[0-9]{2}:[0-9]{2}) (\+[0-9]{4}) ([0-9]{4})/,
+            postedMatch = postedRe.exec(t.created_at),
+            postedOn = postedMatch != null ? (postedMatch[1] + ", " + postedMatch[3] + " " + postedMatch[2] + " " + postedMatch[6] + " " + postedMatch[4] + " GMT" + postedMatch[5]) : (t.created_at),
+            postedLink = "<a href=\"" + profileUri + "\/status\/" + encodeURIComponent(t.id_str) + "\"><span class=\"tweet-date\" title=\"" + postedOn + "\">" + this._relativeTime(new Date(postedOn)) + "</span><\/a>";
+
+         html += "<div class=\"user-tweet detail-list-item\" id=\"" + $html(this.id) + "-tweet-" + $html(t.id_str) + "\">\n";
+         html += "<div class=\"user-icon\"><a href=\"" + profileUri + "\" title=\"" + $html(t.from_user) + "\"><img src=\"" + $html(t.profile_image_url) + "\" alt=\"" + $html(t.from_user) + "\" width=\"48\" height=\"48\" /></a></div>\n";
+         html += "<div class=\"tweet\">\n";
+         html += "<div class=\"tweet-hd\">\n";
+         html += "<span class=\"screen-name\">" + userLink + "</span>\n";
+         html += "</div>\n";
+         html += "<div class=\"tweet-bd\">" + this._formatTweet(t.text) + "</div>\n";
+         html += "<div class=\"tweet-details\">" + this.msg("text.tweetDetails", postedLink, Alfresco.util.decodeHTML(t.source)) + "</div>\n";
+         html += "</div>\n"; // end tweet
+         html += "</div>\n"; // end list-tweet
+         return html;
+      },
+      
+      /**
+       * Get the current search term
+       * 
+       * @method getSearchTerm
+       * @private
+       * @return {string} The currently-configured search term, or the default if no value is configured
+       */
+      _getSearchTerm: function TwitterSearch__getSearchTerm()
+      {
+         return (this.options.searchTerm != "") ?
+                 this.options.searchTerm : this.options.defaultSearchTerm;
+      },
+
+      /**
+       * Request data from the web service
+       * 
+       * @method _request
+       */
+      _request: function TwitterUserTimeline__request(p_obj)
+      {
+         var url = Alfresco.constants.PROXY_URI.replace("/alfresco/", "/twitter-search/") + "search.json";
+         var params = {
+                q: this._getSearchTerm(),
+                result_type: "recent",
+                rpp: p_obj.dataObj.pageSize || this.options.pageSize
+         };
+
+         if (p_obj.dataObj.maxId != null)
+         {
+             params.max_id = p_obj.dataObj.maxId;
+         }
+         if (p_obj.dataObj.minId != null)
+         {
+             params.since_id = p_obj.dataObj.minId;
+         }
+         
+         // Load the timeline
+         Alfresco.util.Ajax.request(
+         {
+            url: url,
+            dataObj: params,
+            successCallback: p_obj.successCallback,
+            failureCallback: p_obj.failureCallback,
+            scope: this,
+            noReloadOnAuthFailure: true
+         });
+      },
+
+      /**
+       * YUI WIDGET EVENT HANDLERS
+       * Handlers for standard events fired from YUI widgets, e.g. "click"
+       */
+
+      /**
+       * Configuration click handler
+       *
+       * @method onConfigClick
+       * @param e {object} HTML event
+       */
+      onConfigClick: function TwitterSearch_onConfigClick(e)
+      {
+         var actionUrl = Alfresco.constants.URL_SERVICECONTEXT + "modules/dashlet/config/" + encodeURIComponent(this.options.componentId);
+         
+         Event.stopEvent(e);
+         
+         if (!this.configDialog)
+         {
+            this.configDialog = new Alfresco.module.SimpleDialog(this.id + "-configDialog").setOptions(
+            {
+               width: "50em",
+               templateUrl: Alfresco.constants.URL_SERVICECONTEXT + "extras/modules/dashlets/twitter-search/config", actionUrl: actionUrl,
+               onSuccess:
+               {
+                  fn: function VideoWidget_onConfigFeed_callback(response)
+                  {
+                     // Refresh the feed
+                     var u = YAHOO.lang.trim(Dom.get(this.configDialog.id + "-searchTerm").value),
+                         newSearchTerm = (u != "") ? u : this.options.defaultSearchTerm;
+                     
+                     if (newSearchTerm != this.options.searchTerm)
+                     {
+                        this.options.searchTerm = newSearchTerm;
+                        this.load();
+                     }
+                  },
+                  scope: this
+               },
+               doSetupFormsValidation:
+               {
+                  fn: function VideoWidget_doSetupForm_callback(form)
+                  {
+                     Dom.get(this.configDialog.id + "-searchTerm").value = this._getSearchTerm();
+                     
+                     // Search term is mandatory
+                     this.configDialog.form.addValidation(this.configDialog.id + "-searchTerm", Alfresco.forms.validation.mandatory, null, "keyup");
+                     this.configDialog.form.addValidation(this.configDialog.id + "-searchTerm", Alfresco.forms.validation.mandatory, null, "blur");
+                  },
+                  scope: this
+               }
+            });
+         }
+         else
+         {
+            this.configDialog.setOptions(
+            {
+               actionUrl: actionUrl,
+               searchTerm: this.options.searchTerm
+            })
          }
          this.configDialog.show();
       }
