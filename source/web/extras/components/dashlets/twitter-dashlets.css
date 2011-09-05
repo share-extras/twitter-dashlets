@@ -23,17 +23,14 @@
 {
    color: #999999;
 }
-.twitter-dashlet .list-tweet,
 .twitter-dashlet .user-tweet
 {
    clear: both;
 }
-.twitter-dashlet .list-tweet .tweet,
 .twitter-dashlet .user-tweet .tweet
 {
 	margin-left: 58px;
 }
-.twitter-dashlet .list-tweet .user-icon,
 .twitter-dashlet .user-tweet .user-icon
 {
    float: left;
