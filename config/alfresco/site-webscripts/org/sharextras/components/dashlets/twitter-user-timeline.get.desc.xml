@@ -1,0 +1,6 @@
+<webscript>
+   <shortname>Twitter Feed</shortname>
+   <description>Display a user's tweets as a dashlet</description>
+   <family>dashlet</family>
+   <url>/components/dashlets/twitter-user-timeline</url>
+</webscript>

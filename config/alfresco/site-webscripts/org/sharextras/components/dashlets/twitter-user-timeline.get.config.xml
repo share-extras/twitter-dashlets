@@ -1,0 +1,5 @@
+<twitter-user-timeline>
+   <defaultUser>Alfresco</defaultUser>
+   <pageSize>20</pageSize>
+   <checkInterval>300</checkInterval>
+</twitter-user-timeline>

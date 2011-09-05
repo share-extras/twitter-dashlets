@@ -1,0 +1,5 @@
+<webscript>
+  <shortname>config-twitter-user-timeline</shortname>
+  <description>Configuration dialog for Twitter user timeline dashlet</description>
+  <url>/extras/modules/dashlets/twitter-user-timeline/config</url>
+</webscript>

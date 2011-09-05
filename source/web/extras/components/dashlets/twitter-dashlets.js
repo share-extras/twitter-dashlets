@@ -964,3 +964,299 @@
       
    });
 })();
+
+/**
+ * Twitter feed dashlet.
+ * 
+ * @namespace Alfresco
+ * @class Alfresco.dashlet.TwitterUserTimeline
+ */
+(function()
+{
+   /**
+    * YUI Library aliases
+    */
+   var Dom = YAHOO.util.Dom,
+      Event = YAHOO.util.Event;
+
+   /**
+    * Alfresco Slingshot aliases
+    */
+   var $html = Alfresco.util.encodeHTML,
+      $combine = Alfresco.util.combinePaths;
+
+
+   /**
+    * Dashboard TwitterUserTimeline constructor.
+    * 
+    * @param {String} htmlId The HTML id of the parent element
+    * @return {Alfresco.dashlet.TwitterUserTimeline} The new component instance
+    * @constructor
+    */
+   Alfresco.dashlet.TwitterUserTimeline = function TwitterUserTimeline_constructor(htmlId)
+   {
+      return Alfresco.dashlet.TwitterUserTimeline.superclass.constructor.call(this, "Alfresco.dashlet.TwitterUserTimeline", htmlId);
+   };
+
+   /**
+    * Extend from Alfresco.dashlet.TwitterBase and add class implementation
+    */
+   YAHOO.extend(Alfresco.dashlet.TwitterUserTimeline, Alfresco.dashlet.TwitterBase,
+   {
+      /**
+       * Object container for initialization options
+       *
+       * @property options
+       * @type object
+       */
+      options: YAHOO.lang.merge(Alfresco.dashlet.TwitterBase.prototype.options,
+      {
+         /**
+          * Twitter username of the user to display the timeline for
+          * 
+          * @property twitterUser
+          * @type string
+          * @default ""
+          */
+         twitterUser: "",
+
+         /**
+          * Default Twitter username of the user to display the timeline for, if no specific user is configured
+          * 
+          * @property defaultTwitterUser
+          * @type string
+          * @default ""
+          */
+         defaultTwitterUser: ""
+      }),
+
+      /**
+       * Fired by YUI when parent element is available for scripting
+       * 
+       * @method onReady
+       */
+      onReady: function TwitterTimeline_onReady()
+      {
+          Alfresco.dashlet.TwitterTimeline.superclass.onReady.call(this);
+          // Load the timeline
+          this.load();
+      },
+      
+      /**
+       * Timeline loaded successfully
+       * 
+       * @method onLoadSuccess
+       * @param p_response {object} Response object from request
+       * @param p_obj {object} Custom object passed to function
+       */
+      onLoadSuccess: function TwitterUserTimeline_onLoadSuccess(p_response, p_obj)
+      {
+         // Update the dashlet title
+         this.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
+         
+         var html = "", tweets, t,userLink, postedLink, isList = this._getTwitterUser().indexOf("/") > 0;
+         
+         if (p_response.json)
+         {
+            tweets = p_response.json;
+            
+            if (tweets.length > 0)
+            {
+               html += this._generateTweetsHTML(tweets);
+            }
+            else
+            {
+               html += "<div class=\"detail-list-item first-item last-item\">\n";
+               html += "<span>\n";
+               if (isList)
+               {
+                  html += this.msg("list.noTweets");
+               }
+               else
+               {
+                  html += this.msg("user.noTweets");
+               }
+               html += "</span>\n";
+               html += "</div>\n";
+            }
+         }
+         
+         this.timeline.innerHTML = html;
+         
+         // Enable the Load More button
+         this.moreButton.set("disabled", false);
+         Dom.setStyle(this.id + "-buttons", "display", "block");
+         
+         // Start the timer to poll for new tweets, if enabled
+         this._resetTimer();
+      },
+
+      /**
+       * Timeline load failed
+       * 
+       * @method onLoadFailure
+       * @param p_response {object} Response object from request
+       * @param p_obj {object} Custom object passed to function
+       */
+      onLoadFailure: function TwitterUserTimeline_onLoadFailure(p_response, p_obj)
+      {
+         // Update the dashlet title
+         this.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
+          
+         var status = p_response.serverResponse.status,
+            isList = this._getTwitterUser().indexOf("/") > 0;
+         if (status == 401 || status == 404)
+         {
+            this.timeline.innerHTML = "<div class=\"msg\">" + this.msg("error." + (isList ? "list" : "user") + "." + status) + "</div>";
+         }
+         else
+         {
+            this.timeline.innerHTML = "<div class=\"msg\">" + this.msg("label.error") + "</div>";
+         }
+         
+         // Disable the Load More button
+         this.moreButton.set("disabled", true);
+         Dom.setStyle(this.id + "-buttons", "display", "none");
+      },
+      
+      /**
+       * PRIVATE FUNCTIONS
+       */
+      
+      /**
+       * Get the current Twitter user or list ID
+       * 
+       * @method _getTwitterUser
+       * @private
+       * @return {string} The name of the currently-configured user or list, or the default
+       * user/list if unconfigured or blank
+       */
+      _getTwitterUser: function TwitterUserTimeline__getTwitterUser()
+      {
+         return (this.options.twitterUser != null && this.options.twitterUser != "") ? 
+               this.options.twitterUser : this.options.defaultTwitterUser;
+      },
+
+      /**
+       * Request data from the web service
+       * 
+       * @method _request
+       */
+      _request: function TwitterUserTimeline__request(p_obj)
+      {
+         var url;
+         var uparts = this._getTwitterUser().split("/");
+         var params = {};
+
+         if (uparts.length > 1)
+         {
+            url = Alfresco.constants.PROXY_URI.replace("/alfresco/", "/twitter/") + "1/" + uparts[0] + "/lists/" + uparts[1] + 
+               "/statuses.json";
+            params = {
+                    per_page: p_obj.dataObj.pageSize || this.options.pageSize
+            };
+            /*
+            url = Alfresco.constants.PROXY_URI.replace("/alfresco/", "/twitter/") + "1/statuses/lists/show.json";
+            params = {
+                    slug: uparts[0],
+                    owner_screen_name: uparts[1],
+                    per_page: p_obj.dataObj.pageSize || this.options.pageSize
+            };*/
+         }
+         else
+         {
+            url = Alfresco.constants.PROXY_URI.replace("/alfresco/", "/twitter/") + "1/statuses/user_timeline.json";
+            params = {
+                    screen_name: uparts[0],
+                    count: p_obj.dataObj.pageSize || this.options.pageSize,
+                    include_rts: true
+            };
+         }
+
+         if (p_obj.dataObj.maxId != null)
+         {
+             params.max_id = p_obj.dataObj.maxId;
+         }
+         if (p_obj.dataObj.minId != null)
+         {
+             params.since_id = p_obj.dataObj.minId;
+         }
+         
+         // Load the timeline
+         Alfresco.util.Ajax.request(
+         {
+            url: url,
+            dataObj: params,
+            successCallback: p_obj.successCallback,
+            failureCallback: p_obj.failureCallback,
+            scope: this,
+            noReloadOnAuthFailure: true
+         });
+      },
+
+      /**
+       * YUI WIDGET EVENT HANDLERS
+       * Handlers for standard events fired from YUI widgets, e.g. "click"
+       */
+
+      /**
+       * Configuration click handler
+       *
+       * @method onConfigClick
+       * @param e {object} HTML event
+       */
+      onConfigClick: function TwitterUserTimeline_onConfigClick(e)
+      {
+         var actionUrl = Alfresco.constants.URL_SERVICECONTEXT + "modules/dashlet/config/" + encodeURIComponent(this.options.componentId);
+         
+         Event.stopEvent(e);
+         
+         if (!this.configDialog)
+         {
+            this.configDialog = new Alfresco.module.SimpleDialog(this.id + "-configDialog").setOptions(
+            {
+               width: "50em",
+               templateUrl: Alfresco.constants.URL_SERVICECONTEXT + "extras/modules/dashlets/twitter-user-timeline/config", actionUrl: actionUrl,
+               onSuccess:
+               {
+                  fn: function VideoWidget_onConfigFeed_callback(response)
+                  {
+                     // Refresh the feed
+                     var u = YAHOO.lang.trim(Dom.get(this.configDialog.id + "-twitterUser").value),
+                        newUser = (u != "") ? u : this.options.defaultTwitterUser;
+                     
+                     if (this.options.twitterUser != newUser)
+                     {
+                        this.options.twitterUser = newUser;
+                        this.load();
+                     }
+                  },
+                  scope: this
+               },
+               doSetupFormsValidation:
+               {
+                  fn: function VideoWidget_doSetupForm_callback(form)
+                  {
+                     Dom.get(this.configDialog.id + "-twitterUser").value = this._getTwitterUser();
+
+                     // Search term is mandatory
+                     this.configDialog.form.addValidation(this.configDialog.id + "-twitterUser", Alfresco.forms.validation.mandatory, null, "keyup");
+                     this.configDialog.form.addValidation(this.configDialog.id + "-twitterUser", Alfresco.forms.validation.mandatory, null, "blur");
+                  },
+                  scope: this
+               }
+            });
+         }
+         else
+         {
+            this.configDialog.setOptions(
+            {
+               actionUrl: actionUrl,
+               twitterUser: this.options.twitterUser
+            });
+         }
+         this.configDialog.show();
+      }
+      
+   });
+})();

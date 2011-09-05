@@ -14,11 +14,18 @@
 			<signature-method>HMAC-SHA1</signature-method>
 		</connector>
 	  
-		<!-- Endpoint -->
+		<!-- Endpoints -->
 	    <endpoint>
 	      <id>twitter-auth</id>
 	      <name>Twitter Authenticated API</name>
 	      <connector-id>twitter-oauth</connector-id>
+	      <endpoint-url>http://api.twitter.com</endpoint-url>
+	    </endpoint>
+	    
+	    <endpoint>
+	      <id>twitter</id>
+	      <name>Twitter Remote API</name>
+	      <connector-id>http</connector-id>
 	      <endpoint-url>http://api.twitter.com</endpoint-url>
 	    </endpoint>
 	    
