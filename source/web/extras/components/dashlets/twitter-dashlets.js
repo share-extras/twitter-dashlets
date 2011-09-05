@@ -164,7 +164,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * 
         * @method onReady
         */
-       onReady: function TwitterTimeline_onReady()
+       onReady: function TwitterBase_onReady()
        {
           Event.addListener(this.id + "-configure-link", "click", this.onConfigClick, this, true);
           
@@ -213,7 +213,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * 
         * @method load
         */
-       load: function TwitterTimeline_load()
+       load: function TwitterBase_load()
        {
           // Load the timeline
           this._request(
@@ -242,7 +242,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @param p_response {object} Response object from request
         * @param p_obj {object} Custom object passed to function
         */
-       onLoadSuccess: function TwitterTimeline_onLoadSuccess(p_response, p_obj)
+       onLoadSuccess: function TwitterBase_onLoadSuccess(p_response, p_obj)
        {
        },
 
@@ -253,7 +253,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @param p_response {object} Response object from request
         * @param p_obj {object} Custom object passed to function
         */
-       onLoadFailure: function TwitterTimeline_onLoadFailure(p_response, p_obj)
+       onLoadFailure: function TwitterBase_onLoadFailure(p_response, p_obj)
        {
        },
 
@@ -262,7 +262,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * 
         * @method extend
         */
-       extend: function TwitterTimeline_extend()
+       extend: function TwitterBase_extend()
        {
           // Load the user timeline
           this._request(
@@ -292,7 +292,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @param p_response {object} Response object from request
         * @param p_obj {object} Custom object passed to function
         */
-       onExtensionLoaded: function TwitterTimeline_onExtensionLoaded(p_response, p_obj)
+       onExtensionLoaded: function TwitterBase_onExtensionLoaded(p_response, p_obj)
        {
           this._refreshDates(); // Refresh existing dates
           this.timeline.innerHTML += this._generateTweetsHTML(p_response.json.slice(1)); // Do not include duplicate tweet
@@ -306,7 +306,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @param p_response {object} Response object from request
         * @param p_obj {object} Custom object passed to function
         */
-       onExtensionLoadFailure: function TwitterTimeline_onExtensionLoadFailure(p_response, p_obj)
+       onExtensionLoadFailure: function TwitterBase_onExtensionLoadFailure(p_response, p_obj)
        {
           Alfresco.util.PopupManager.displayMessage(
           {
@@ -323,7 +323,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * 
         * @method pollNew
         */
-       pollNew: function TwitterTimeline_pollNew()
+       pollNew: function TwitterBase_pollNew()
        {
           // Refresh existing dates
           this._refreshDates();
@@ -355,7 +355,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @param p_response {object} Response object from request
         * @param p_obj {object} Custom object passed to function
         */
-       onNewTweetsLoaded: function TwitterTimeline_onNewTweetsLoaded(p_response, p_obj)
+       onNewTweetsLoaded: function TwitterBase_onNewTweetsLoaded(p_response, p_obj)
        {
           this.newTweets = p_response.json;
           this._refreshNotification();
@@ -371,7 +371,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @param p_response {object} Response object from request
         * @param p_obj {object} Custom object passed to function
         */
-       onNewTweetsLoadFailure: function TwitterTimeline_onNewTweetsLoadFailure(p_response, p_obj)
+       onNewTweetsLoadFailure: function TwitterBase_onNewTweetsLoadFailure(p_response, p_obj)
        {
           // Schedule a new poll
           this._resetTimer();
@@ -389,7 +389,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @param tweets {array} Tweet objects to render into HTML
         * @return {string} HTML markup
         */
-       _generateTweetsHTML: function TwitterTimeline__generateTweetsHTML(tweets)
+       _generateTweetsHTML: function TwitterBase__generateTweetsHTML(tweets)
        {
           var html = "", t;
           for (var i = 0; i < tweets.length; i++)
@@ -416,7 +416,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @param rt {object} Retweet object, if the Tweet has been RT'ed
         * @return {string} HTML markup
         */
-       _generateTweetHTML: function TwitterTimeline__generateTweetHTML(t, rt)
+       _generateTweetHTML: function TwitterBase__generateTweetHTML(t, rt)
        {
           var html = "", 
              profileUri = "http://twitter.com/" + encodeURIComponent(t.user.screen_name),
@@ -448,7 +448,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @param {string} text The plain tweet text
         * @return {string} The tweet text, with hyperlinks added
         */
-       _formatTweet: function TwitterTimeline__formatTweet(text)
+       _formatTweet: function TwitterBase__formatTweet(text)
        {
           return text.replace(
                 /https?:\/\/\S+[^\s.]/gm, "<a href=\"$&\">$&</a>").replace(
@@ -464,7 +464,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @return {string} The ID of the earliest Tweet shown in the timeline, or null if
         * no Tweets are available or the last Tweet has no compatible ID on its element
         */
-       _getEarliestTweetId: function TwitterTimeline__getEarliestTweetId()
+       _getEarliestTweetId: function TwitterBase__getEarliestTweetId()
        {
           var div = Dom.getLastChild(this.timeline);
           if (div !== null)
@@ -486,7 +486,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @return {string} The ID of the latest Tweet shown in the timeline, or null if
         * no Tweets are available or the last Tweet has no compatible ID on its element
         */
-       _getLatestTweetId: function TwitterTimeline__getLatestTweetId()
+       _getLatestTweetId: function TwitterBase__getLatestTweetId()
        {
           var div = Dom.getFirstChild(this.timeline);
           if (div !== null)
@@ -506,7 +506,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @method _resetCounter
         * @private
         */
-       _resetTimer: function TwitterTimeline__resetTimer()
+       _resetTimer: function TwitterBase__resetTimer()
        {
           this._stopTimer();
           if (this.options.checkInterval > 0)
@@ -522,7 +522,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @method _stopTimer
         * @private
         */
-       _stopTimer: function TwitterTimeline__stopTimer()
+       _stopTimer: function TwitterBase__stopTimer()
        {
           if (this.pollTimer != null)
           {
@@ -536,7 +536,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @method _refreshNotification
         * @private
         */
-       _refreshNotification: function TwitterSearch__refreshNotification()
+       _refreshNotification: function TwitterBase__refreshNotification()
        {
            if (this.newTweets != null && this.newTweets.length > 0)
            {
@@ -565,7 +565,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @private
         * @param d {date} Date object
         */
-       _relativeTime: function TwitterTimeline__getRelativeTime(d)
+       _relativeTime: function TwitterBase__getRelativeTime(d)
        {
            return typeof(Alfresco.util.relativeTime) === "function" ? Alfresco.util.relativeTime(d) : Alfresco.util.formatDate(d)
        },
@@ -576,7 +576,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @method _refreshDates
         * @private
         */
-       _refreshDates: function TwitterTimeline__refreshDates()
+       _refreshDates: function TwitterBase__refreshDates()
        {
           var els = Dom.getElementsByClassName("tweet-date", "span", this.timeline), dEl;
           for (var i = 0; i < els.length; i++)
@@ -591,7 +591,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * 
         * @method _request
         */
-       _request: function TwitterTimeline__request(p_obj)
+       _request: function TwitterBase__request(p_obj)
        {
        },
 
@@ -606,7 +606,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @method onMoreButtonClick
         * @param e {object} HTML event
         */
-       onMoreButtonClick: function TwitterTimeline_onMoreButtonClick(e, obj)
+       onMoreButtonClick: function TwitterBase_onMoreButtonClick(e, obj)
        {
           // Disable the button while we make the request
           this.moreButton.set("disabled", true);
@@ -619,7 +619,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @method onShowNewClick
         * @param e {object} HTML event
         */
-       onShowNewClick: function TwitterTimeline_onShowNewClick(e, obj)
+       onShowNewClick: function TwitterBase_onShowNewClick(e, obj)
        {
           Event.stopEvent(e);
           if (this.newTweets !== null && this.newTweets.length > 0)
@@ -1059,7 +1059,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        * 
        * @method onReady
        */
-      onReady: function TwitterTimeline_onReady()
+      onReady: function TwitterUserTimeline_onReady()
       {
           Extras.dashlet.TwitterTimeline.superclass.onReady.call(this);
           // Load the timeline
@@ -1494,7 +1494,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        * 
        * @method _request
        */
-      _request: function TwitterUserTimeline__request(p_obj)
+      _request: function TwitterSearch__request(p_obj)
       {
          var url = Alfresco.constants.PROXY_URI.replace("/alfresco/", "/twitter-search/") + "search.json";
          var params = {
