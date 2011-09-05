@@ -1,5 +1,5 @@
 <script type="text/javascript">//<![CDATA[
-   new Alfresco.dashlet.TwitterSearch("${args.htmlid}").setOptions(
+   new Extras.dashlet.TwitterSearch("${args.htmlid}").setOptions(
    {
       "componentId": "${instance.object.id}",
       "searchTerm": "${(args.searchTerm!"")?js_string}",

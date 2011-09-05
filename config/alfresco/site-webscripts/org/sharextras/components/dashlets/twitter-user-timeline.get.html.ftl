@@ -1,5 +1,5 @@
 <script type="text/javascript">//<![CDATA[
-   new Alfresco.dashlet.TwitterUserTimeline("${args.htmlid}").setOptions(
+   new Extras.dashlet.TwitterUserTimeline("${args.htmlid}").setOptions(
    {
       "componentId": "${instance.object.id}",
       "twitterUser": "${(args.twitterUser!"")?js_string}",

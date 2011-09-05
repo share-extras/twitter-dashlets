@@ -1,5 +1,5 @@
 <script type="text/javascript">//<![CDATA[
-   new Alfresco.dashlet.TwitterTimeline("${args.htmlid}").setOptions(
+   new Extras.dashlet.TwitterTimeline("${args.htmlid}").setOptions(
    {
       "componentId": "${instance.object.id}",
       "pageSize": ${(config.script['twitter-timeline'].pageSize?string)?number?c},

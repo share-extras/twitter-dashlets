@@ -1,8 +1,32 @@
 /**
- * Base Twitter dashlet
+ * Copyright (C) 2010-2011 Share Extras contributors.
+ */
+
+/**
+* Extras root namespace.
+* 
+* @namespace Extras
+*/
+if (typeof Extras == "undefined" || !Extras)
+{
+   var Extras = {};
+}
+
+/**
+* Extras dashlet namespace.
+* 
+* @namespace Extras.dashlet
+*/
+if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
+{
+   Extras.dashlet = {};
+}
+
+/**
+* Base Twitter dashlet
  * 
  * @namespace Alfresco
- * @class Alfresco.dashlet.TwitterBase
+ * @class Extras.dashlet.TwitterBase
  */
 (function()
 {
@@ -23,18 +47,18 @@
     * Dashboard TwitterBase constructor.
     * 
     * @param {String} htmlId The HTML id of the parent element
-    * @return {Alfresco.dashlet.TwitterBase} The new component instance
+    * @return {Extras.dashlet.TwitterBase} The new component instance
     * @constructor
     */
-   Alfresco.dashlet.TwitterBase = function TwitterBase_constructor(name, htmlId)
+   Extras.dashlet.TwitterBase = function TwitterBase_constructor(name, htmlId)
    {
-      return Alfresco.dashlet.TwitterBase.superclass.constructor.call(this, name, htmlId);
+      return Extras.dashlet.TwitterBase.superclass.constructor.call(this, name, htmlId);
    };
 
    /**
     * Extend from Alfresco.component.Base and add class implementation
     */
-   YAHOO.extend(Alfresco.dashlet.TwitterBase, Alfresco.component.Base,
+   YAHOO.extend(Extras.dashlet.TwitterBase, Alfresco.component.Base,
    {
        /**
         * Object container for initialization options
@@ -617,7 +641,7 @@
  * Twitter timeline dashlet.
  * 
  * @namespace Alfresco
- * @class Alfresco.dashlet.TwitterTimeline
+ * @class Extras.dashlet.TwitterTimeline
  */
 (function()
 {
@@ -638,18 +662,18 @@
     * Dashboard TwitterTimeline constructor.
     * 
     * @param {String} htmlId The HTML id of the parent element
-    * @return {Alfresco.dashlet.TwitterTimeline} The new component instance
+    * @return {Extras.dashlet.TwitterTimeline} The new component instance
     * @constructor
     */
-   Alfresco.dashlet.TwitterTimeline = function TwitterTimeline_constructor(htmlId)
+   Extras.dashlet.TwitterTimeline = function TwitterTimeline_constructor(htmlId)
    {
-      return Alfresco.dashlet.TwitterTimeline.superclass.constructor.call(this, "Alfresco.dashlet.TwitterTimeline", htmlId);
+      return Extras.dashlet.TwitterTimeline.superclass.constructor.call(this, "Extras.dashlet.TwitterTimeline", htmlId);
    };
 
    /**
-    * Extend from Alfresco.dashlet.TwitterBase and add class implementation
+    * Extend from Extras.dashlet.TwitterBase and add class implementation
     */
-   YAHOO.extend(Alfresco.dashlet.TwitterTimeline, Alfresco.dashlet.TwitterBase,
+   YAHOO.extend(Extras.dashlet.TwitterTimeline, Extras.dashlet.TwitterBase,
    {
 
       /**
@@ -659,7 +683,7 @@
        */
       onReady: function TwitterTimeline_onReady()
       {
-          Alfresco.dashlet.TwitterTimeline.superclass.onReady.call(this);
+          Extras.dashlet.TwitterTimeline.superclass.onReady.call(this);
          
          // TODO Check OAuth is supported and warn if not
          
@@ -969,7 +993,7 @@
  * Twitter feed dashlet.
  * 
  * @namespace Alfresco
- * @class Alfresco.dashlet.TwitterUserTimeline
+ * @class Extras.dashlet.TwitterUserTimeline
  */
 (function()
 {
@@ -990,18 +1014,18 @@
     * Dashboard TwitterUserTimeline constructor.
     * 
     * @param {String} htmlId The HTML id of the parent element
-    * @return {Alfresco.dashlet.TwitterUserTimeline} The new component instance
+    * @return {Extras.dashlet.TwitterUserTimeline} The new component instance
     * @constructor
     */
-   Alfresco.dashlet.TwitterUserTimeline = function TwitterUserTimeline_constructor(htmlId)
+   Extras.dashlet.TwitterUserTimeline = function TwitterUserTimeline_constructor(htmlId)
    {
-      return Alfresco.dashlet.TwitterUserTimeline.superclass.constructor.call(this, "Alfresco.dashlet.TwitterUserTimeline", htmlId);
+      return Extras.dashlet.TwitterUserTimeline.superclass.constructor.call(this, "Extras.dashlet.TwitterUserTimeline", htmlId);
    };
 
    /**
-    * Extend from Alfresco.dashlet.TwitterBase and add class implementation
+    * Extend from Extras.dashlet.TwitterBase and add class implementation
     */
-   YAHOO.extend(Alfresco.dashlet.TwitterUserTimeline, Alfresco.dashlet.TwitterBase,
+   YAHOO.extend(Extras.dashlet.TwitterUserTimeline, Extras.dashlet.TwitterBase,
    {
       /**
        * Object container for initialization options
@@ -1009,7 +1033,7 @@
        * @property options
        * @type object
        */
-      options: YAHOO.lang.merge(Alfresco.dashlet.TwitterBase.prototype.options,
+      options: YAHOO.lang.merge(Extras.dashlet.TwitterBase.prototype.options,
       {
          /**
           * Twitter username of the user to display the timeline for
@@ -1037,7 +1061,7 @@
        */
       onReady: function TwitterTimeline_onReady()
       {
-          Alfresco.dashlet.TwitterTimeline.superclass.onReady.call(this);
+          Extras.dashlet.TwitterTimeline.superclass.onReady.call(this);
           // Load the timeline
           this.load();
       },
@@ -1265,7 +1289,7 @@
  * Twitter search dashlet.
  * 
  * @namespace Alfresco
- * @class Alfresco.dashlet.TwitterSearch
+ * @class Extras.dashlet.TwitterSearch
  */
 (function()
 {
@@ -1285,18 +1309,18 @@
     * Dashboard TwitterSearch constructor.
     * 
     * @param {String} htmlId The HTML id of the parent element
-    * @return {Alfresco.dashlet.TwitterSearch} The new component instance
+    * @return {Extras.dashlet.TwitterSearch} The new component instance
     * @constructor
     */
-   Alfresco.dashlet.TwitterSearch = function TwitterSearch_constructor(htmlId)
+   Extras.dashlet.TwitterSearch = function TwitterSearch_constructor(htmlId)
    {
-      return Alfresco.dashlet.TwitterSearch.superclass.constructor.call(this, "Alfresco.dashlet.TwitterSearch", htmlId);
+      return Extras.dashlet.TwitterSearch.superclass.constructor.call(this, "Extras.dashlet.TwitterSearch", htmlId);
    };
 
    /**
-    * Extend from Alfresco.dashlet.TwitterBase and add class implementation
+    * Extend from Extras.dashlet.TwitterBase and add class implementation
     */
-   YAHOO.extend(Alfresco.dashlet.TwitterSearch, Alfresco.dashlet.TwitterBase,
+   YAHOO.extend(Extras.dashlet.TwitterSearch, Extras.dashlet.TwitterBase,
    {
       /**
        * Object container for initialization options
@@ -1304,7 +1328,7 @@
        * @property options
        * @type object
        */
-      options: YAHOO.lang.merge(Alfresco.dashlet.TwitterBase.prototype.options,
+      options: YAHOO.lang.merge(Extras.dashlet.TwitterBase.prototype.options,
       {
          /**
           * Twitter search term
@@ -1331,7 +1355,7 @@
        */
       onReady: function TwitterSearch_onReady()
       {
-          Alfresco.dashlet.TwitterTimeline.superclass.onReady.call(this);
+          Extras.dashlet.TwitterTimeline.superclass.onReady.call(this);
          // Load the results
          this.load();
       },
