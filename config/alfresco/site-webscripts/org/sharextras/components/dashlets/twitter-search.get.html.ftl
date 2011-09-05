@@ -2,10 +2,10 @@
    new Alfresco.dashlet.TwitterSearch("${args.htmlid}").setOptions(
    {
       "componentId": "${instance.object.id}",
-      "searchTerm": "${(searchTerm!"")?js_string}",
-      "defaultSearchTerm": "${(defaultSearchTerm!"")?js_string}",
-      "pageSize": ${(pageSize!20)?c},
-      "checkInterval": ${(config.script["twitter-search"].checkInterval!0)?number?c}
+      "searchTerm": "${(args.searchTerm!"")?js_string}",
+      "defaultSearchTerm": "${(config.script["twitter-search"].defaultSearchTerm!"")?js_string}",
+      "pageSize": ${(config.script['twitter-search'].pageSize?string)?number?c},
+      "checkInterval": ${(config.script["twitter-search"].checkInterval?string)?number?c}
    }).setMessages(
       ${messages}
    );
@@ -13,7 +13,7 @@
 //]]></script>
 
 <div class="dashlet twitter-dashlet twitter-search">
-   <div class="title" id="${args.htmlid}-title">${msg("header.search", (searchTerm!'')?url, searchTerm!'')}</div>
+   <div class="title" id="${args.htmlid}-title">${msg("header.default")}</div>
    <#if hasConfigPermission>
       <div class="toolbar">
          <a id="${args.htmlid}-configure-link" class="theme-color-1" title="${msg('link.configure')}" href="">${msg("link.configure")}</a>

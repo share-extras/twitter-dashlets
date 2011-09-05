@@ -1,10 +1,6 @@
 function main()
 {
-   var s = new XML(config.script),
-      defaultSearchTerm = s.defaultSearchTerm.toString(),
-      pageSize = parseInt(s.pageSize.toString(), 10),
-      searchTerm = args.searchTerm ? args.searchTerm : defaultSearchTerm,
-      hasConfigPermission = false;
+   var hasConfigPermission = false;
    
    // Work out if the user has permission to configure the dashlet
    
@@ -30,10 +26,7 @@ function main()
       hasConfigPermission = true; // User dashboard
    }
 
-   model.pageSize = pageSize;
-   model.searchTerm = searchTerm;
    model.hasConfigPermission = hasConfigPermission;
-   model.defaultSearchTerm = defaultSearchTerm;
 }
 
 main();
