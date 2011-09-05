@@ -95,41 +95,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
            */
           checkInterval: 300
        },
-       /**
-        * User timeline DOM container.
-        * 
-        * @property activityList
-        * @type object
-        * @default null
-        */
-       timeline: null,
-
-       /**
-        * Dashlet title DOM container.
-        * 
-        * @property title
-        * @type object
-        * @default null
-        */
-       title: null,
-
-       /**
-        * Notifications DOM container.
-        * 
-        * @property notifications
-        * @type object
-        * @default null
-        */
-       notifications: null,
-
-       /**
-        * Load More button
-        * 
-        * @property moreButton
-        * @type object
-        * @default null
-        */
-       moreButton: null,
 
        /**
         * New Tweets cache. Populated by polling function, but cached so that the user
@@ -169,23 +134,24 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           Event.addListener(this.id + "-configure-link", "click", this.onConfigClick, this, true);
           
           // The user timeline container
-          this.timeline = Dom.get(this.id + "-timeline");
+          this.widgets.timeline = Dom.get(this.id + "-timeline");
           
           // The dashlet title container
-          this.title = Dom.get(this.id + "-title");
+          this.widgets.title = Dom.get(this.id + "-title");
           
           // The new tweets notification container
-          this.notifications = Dom.get(this.id + "-notifications");
-          Event.addListener(this.notifications, "click", this.onShowNewClick, null, this);
+          this.widgets.notifications = Dom.get(this.id + "-notifications");
+          Event.addListener(this.widgets.notifications, "click", this.onShowNewClick, null, this);
           
-          // Set up the More Tweets button
-          this.moreButton = new YAHOO.widget.Button(
+          // Set up the buttons container and the More Tweets button
+          this.widgets.buttons = Dom.get(this.id + "-buttons");
+          this.widgets.moreButton = new YAHOO.widget.Button(
              this.id + "-btn-more",
              {
                 disabled: true,
                 onclick: {
                    fn: this.onMoreButtonClick,
-                   obj: this.moreButton,
+                   obj: this.widgets.moreButton,
                    scope: this
                 }
              }
@@ -279,8 +245,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        onExtensionLoaded: function TwitterBase_onExtensionLoaded(p_response, p_obj)
        {
           this._refreshDates(); // Refresh existing dates
-          this.timeline.innerHTML += this._generateTweetsHTML(p_response.json.slice(1)); // Do not include duplicate tweet
-          this.moreButton.set("disabled", false);
+          this.widgets.timeline.innerHTML += this._generateTweetsHTML(p_response.json.slice(1)); // Do not include duplicate tweet
+          this.widgets.moreButton.set("disabled", false);
        },
        
        /**
@@ -298,7 +264,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           });
           
           // Re-enable the button
-          this.moreButton.set("disabled", false);
+          this.widgets.moreButton.set("disabled", false);
        },
        
        /**
@@ -450,7 +416,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        _getEarliestTweetId: function TwitterBase__getEarliestTweetId()
        {
-          var div = Dom.getLastChild(this.timeline);
+          var div = Dom.getLastChild(this.widgets.timeline);
           if (div !== null)
           {
              var id = Dom.getAttribute(div, "id");
@@ -472,7 +438,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        _getLatestTweetId: function TwitterBase__getLatestTweetId()
        {
-          var div = Dom.getFirstChild(this.timeline);
+          var div = Dom.getFirstChild(this.widgets.timeline);
           if (div !== null)
           {
              var id = Dom.getAttribute(div, "id");
@@ -527,18 +493,18 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
               // Create notification
               if (this.newTweets.length == 1)
               {
-                 this.notifications.innerHTML = this.msg("message.newTweet");
+                 this.widgets.notifications.innerHTML = this.msg("message.newTweet");
               }
               else
               {
-                 this.notifications.innerHTML = this.msg("message.newTweets", this.newTweets.length);
+                 this.widgets.notifications.innerHTML = this.msg("message.newTweets", this.newTweets.length);
               }
-              Dom.setStyle(this.notifications, "display", "block");
+              Dom.setStyle(this.widgets.notifications, "display", "block");
            }
            else
            {
               // Remove notification
-              Dom.setStyle(this.notifications, "display", "none");
+              Dom.setStyle(this.widgets.notifications, "display", "none");
            }
        },
        
@@ -562,7 +528,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        _refreshDates: function TwitterBase__refreshDates()
        {
-          var els = Dom.getElementsByClassName("tweet-date", "span", this.timeline), dEl;
+          var els = Dom.getElementsByClassName("tweet-date", "span", this.widgets.timeline), dEl;
           for (var i = 0; i < els.length; i++)
           {
              dEl = els[i];
@@ -593,7 +559,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        onMoreButtonClick: function TwitterBase_onMoreButtonClick(e, obj)
        {
           // Disable the button while we make the request
-          this.moreButton.set("disabled", true);
+          this.widgets.moreButton.set("disabled", true);
           this.extend();
        },
 
@@ -610,7 +576,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           {
              var thtml = this._generateTweetsHTML(this.newTweets);
              this._refreshDates(); // Refresh existing dates
-             this.timeline.innerHTML = thtml + this.timeline.innerHTML;
+             this.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
              this.newTweets = null;
           }
           
@@ -829,7 +795,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onLoadSuccess: function TwitterTimeline_onLoadSuccess(p_response, p_obj)
       {
          // Update the dashlet title
-         this.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
+         this.widgets.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
          
          var html = "", tweets, t,userLink, postedLink, isList = this._getTwitterUser().indexOf("/") > 0;
          
@@ -858,11 +824,11 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
             }
          }
          
-         this.timeline.innerHTML = html;
+         this.widgets.timeline.innerHTML = html;
          
          // Enable the Load More button
-         this.moreButton.set("disabled", false);
-         Dom.setStyle(this.id + "-buttons", "display", "block");
+         this.widgets.moreButton.set("disabled", false);
+         Dom.setStyle(this.widgets.buttons, "display", "block");
          
          // Start the timer to poll for new tweets, if enabled
          this._resetTimer();
@@ -878,22 +844,22 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onLoadFailure: function TwitterTimeline_onLoadFailure(p_response, p_obj)
       {
          // Update the dashlet title
-         this.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
+         this.widgets.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
           
          var status = p_response.serverResponse.status,
             isList = this._getTwitterUser().indexOf("/") > 0;
          if (status == 401 || status == 404)
          {
-            this.timeline.innerHTML = "<div class=\"msg\">" + this.msg("error." + (isList ? "list" : "user") + "." + status) + "</div>";
+            this.widgets.timeline.innerHTML = "<div class=\"msg\">" + this.msg("error." + (isList ? "list" : "user") + "." + status) + "</div>";
          }
          else
          {
-            this.timeline.innerHTML = "<div class=\"msg\">" + this.msg("label.error") + "</div>";
+            this.widgets.timeline.innerHTML = "<div class=\"msg\">" + this.msg("label.error") + "</div>";
          }
          
          // Disable the Load More button
-         this.moreButton.set("disabled", true);
-         Dom.setStyle(this.id + "-buttons", "display", "none");
+         this.widgets.moreButton.set("disabled", true);
+         Dom.setStyle(this.widgets.buttons, "display", "none");
       },
       
       /**
@@ -1016,14 +982,14 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                          me.oAuth.clearCredentials();
                          me.oAuth.saveCredentials();
                          // Remove existing messages
-                         me.timeline.innerHTML = "";
+                         me.widgets.timeline.innerHTML = "";
                          // Display the Connect information and button
                          Dom.setStyle(me.widgets.connect, "display", "block");
                          // Enable the Connect button
                          me.widgets.connectButton.set("disabled", false);
                          // Disable the Disconnect button and More button
                          Dom.setStyle(me.widgets.utils, "display", "none");
-                         Dom.setStyle(me.id + "-buttons", "display", "none");
+                         Dom.setStyle(me.widgets.buttons, "display", "none");
                          this.destroy();
                      },
                      isDefault: true
@@ -1128,7 +1094,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onLoadSuccess: function TwitterUserTimeline_onLoadSuccess(p_response, p_obj)
       {
          // Update the dashlet title
-         this.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
+         this.widgets.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
          
          var html = "", tweets, t,userLink, postedLink, isList = this._getTwitterUser().indexOf("/") > 0;
          
@@ -1157,11 +1123,11 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
             }
          }
          
-         this.timeline.innerHTML = html;
+         this.widgets.timeline.innerHTML = html;
          
          // Enable the Load More button
-         this.moreButton.set("disabled", false);
-         Dom.setStyle(this.id + "-buttons", "display", "block");
+         this.widgets.moreButton.set("disabled", false);
+         Dom.setStyle(this.widgets.buttons, "display", "block");
          
          // Start the timer to poll for new tweets, if enabled
          this._resetTimer();
@@ -1177,22 +1143,22 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onLoadFailure: function TwitterUserTimeline_onLoadFailure(p_response, p_obj)
       {
          // Update the dashlet title
-         this.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
+         this.widgets.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
           
          var status = p_response.serverResponse.status,
             isList = this._getTwitterUser().indexOf("/") > 0;
          if (status == 401 || status == 404)
          {
-            this.timeline.innerHTML = "<div class=\"msg\">" + this.msg("error." + (isList ? "list" : "user") + "." + status) + "</div>";
+            this.widgets.timeline.innerHTML = "<div class=\"msg\">" + this.msg("error." + (isList ? "list" : "user") + "." + status) + "</div>";
          }
          else
          {
-            this.timeline.innerHTML = "<div class=\"msg\">" + this.msg("label.error") + "</div>";
+            this.widgets.timeline.innerHTML = "<div class=\"msg\">" + this.msg("label.error") + "</div>";
          }
          
          // Disable the Load More button
-         this.moreButton.set("disabled", true);
-         Dom.setStyle(this.id + "-buttons", "display", "none");
+         this.widgets.moreButton.set("disabled", true);
+         Dom.setStyle(this.widgets.buttons, "display", "none");
       },
       
       /**
@@ -1422,7 +1388,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onLoadSuccess: function TwitterSearch_onLoadSuccess(p_response, p_obj)
       {
          // Update the dashlet title
-         this.title.innerHTML = this.msg("header.search", encodeURIComponent(this._getSearchTerm()), this._getSearchTerm());
+         this.widgets.title.innerHTML = this.msg("header.search", encodeURIComponent(this._getSearchTerm()), this._getSearchTerm());
          
          var html = "", tweets;
          
@@ -1444,15 +1410,15 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
             }
          }
          
-         this.timeline.innerHTML = html;
+         this.widgets.timeline.innerHTML = html;
          
          // Empty the new tweets cache and remove any notification
          this.newTweets = [];
          this._refreshNotification();
          
          // Enable the Load More button
-         this.moreButton.set("disabled", false);
-         Dom.setStyle(this.id + "-buttons", "display", "block");
+         this.widgets.moreButton.set("disabled", false);
+         Dom.setStyle(this.widgets.buttons, "display", "block");
          
          // Start the timer to poll for new tweets, if enabled
          this._resetTimer();
@@ -1468,14 +1434,14 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onLoadFailure: function TwitterSearch_onLoadFailure(p_response, p_obj)
       {
          // Update the dashlet title
-         this.title.innerHTML = this.msg("header.search", encodeURIComponent(this._getSearchTerm()), this._getSearchTerm());
+         this.widgets.title.innerHTML = this.msg("header.search", encodeURIComponent(this._getSearchTerm()), this._getSearchTerm());
          
          // Update the content
-         this.timeline.innerHTML = "<div class=\"msg\">" + this.msg("label.error") + "</div>";
+         this.widgets.timeline.innerHTML = "<div class=\"msg\">" + this.msg("label.error") + "</div>";
          
          // Disable the Load More button
-         this.moreButton.set("disabled", true);
-         Dom.setStyle(this.id + "-buttons", "display", "none");
+         this.widgets.moreButton.set("disabled", true);
+         Dom.setStyle(this.widgets.buttons, "display", "none");
       },
       
       /**
@@ -1488,8 +1454,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onExtensionLoaded: function TwitterSearch_onExtensionLoaded(p_response, p_obj)
       {
          this._refreshDates(); // Refresh existing dates
-         this.timeline.innerHTML += this._generateTweetsHTML(p_response.json.results.slice(1)); // Do not include duplicate tweet
-         this.moreButton.set("disabled", false);
+         this.widgets.timeline.innerHTML += this._generateTweetsHTML(p_response.json.results.slice(1)); // Do not include duplicate tweet
+         this.widgets.moreButton.set("disabled", false);
       },
       
       /**
