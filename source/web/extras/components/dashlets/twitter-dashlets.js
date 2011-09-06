@@ -50,9 +50,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
     * @return {Extras.dashlet.TwitterBase} The new component instance
     * @constructor
     */
-   Extras.dashlet.TwitterBase = function TwitterBase_constructor(name, htmlId)
+   Extras.dashlet.TwitterBase = function TwitterBase_constructor(name, id, components)
    {
-      return Extras.dashlet.TwitterBase.superclass.constructor.call(this, name, htmlId);
+      return Extras.dashlet.TwitterBase.superclass.constructor.call(this, name, id, components);
    };
 
    /**
@@ -82,9 +82,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
            * 
            * @property pageSize
            * @type int
-           * @default 20
+           * @default 50
            */
-          pageSize: 20,
+          pageSize: 50,
 
           /**
            * How often the dashlet should poll for new Tweets, in seconds. Setting to zero disabled checking.
@@ -95,6 +95,15 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
            */
           checkInterval: 300
        },
+
+       /**
+        * ID of the latest known Tweet, not including newly-posted tweets from the current user
+        * 
+        * @property latestTweetId
+        * @type string
+        * @default null
+        */
+       latestTweetId: null,
 
        /**
         * New Tweets cache. Populated by polling function, but cached so that the user
@@ -116,7 +125,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        pollTimer: null,
 
        /**
-        * OAuth helper for connecting to the Yammer service
+        * OAuth helper for connecting to the Twitter service
         * 
         * @property oAuth
         * @type Extras.OAuthHelper
@@ -283,7 +292,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           {
              dataObj:
              {
-                minId: this._getLatestTweetId()
+                minId: this.latestTweetId
              },
              successCallback:
              {
@@ -384,7 +393,17 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           html += !YAHOO.lang.isUndefined(rt) ? " <span class=\"retweeted\">" + this.msg("label.retweetedBy", rt.user.screen_name) + "</span>\n" : "";
           html += "</div>\n";
           html += "<div class=\"tweet-bd\">" + this._formatTweet(t.text) + "</div>\n";
-          html += "<div class=\"tweet-details\">" + this.msg("text.tweetDetails", postedLink, t.source) + "</div>\n";
+          html += "<div class=\"tweet-details\">\n";
+          html += "<span>" + this.msg("text.tweetDetails", postedLink, t.source) + "</span>";
+          if (this.oAuth != null)
+          {
+              html += "<span class=\"twitter-actions\">\n";
+              //html += "<a href=\"\" class=\"twitter-favorite-link\"><span>" + this.msg("link.favorite") + "</span></a>\n";
+              html += "<a href=\"\" class=\"twitter-retweet-link\"><span>" + this.msg("link.retweet") + "</span></a>\n";
+              html += "<a href=\"\" class=\"twitter-reply-link\"><span>" + this.msg("link.reply") + "</span></a>\n";
+              html += "</span>\n";
+          }
+          html += "</div>\n";
           html += "</div>\n"; // end tweet
           html += "</div>\n"; // end list-tweet
           return html;
@@ -574,10 +593,20 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           Event.stopEvent(e);
           if (this.newTweets !== null && this.newTweets.length > 0)
           {
-             var thtml = this._generateTweetsHTML(this.newTweets);
+             var thtml = this._generateTweetsHTML(this.newTweets), tEl;
+             // Remove existing tweets with the same ID
+             for (var i = 0; i < this.newTweets.length; i++)
+             {
+                tEl = document.getElementById(this.id + "-tweet-" + this.newTweets[i].id_str);
+                if (tEl != null)
+                {
+                   this.widgets.timeline.removeChild(tEl);
+                }
+             }
              this._refreshDates(); // Refresh existing dates
              this.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
              this.newTweets = null;
+             this.latestTweetId = this._getLatestTweetId();
           }
           
           // Fade out the notification
@@ -617,7 +646,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
     */
    Extras.dashlet.TwitterTimeline = function TwitterTimeline_constructor(htmlId)
    {
-      return Extras.dashlet.TwitterTimeline.superclass.constructor.call(this, "Extras.dashlet.TwitterTimeline", htmlId);
+      return Extras.dashlet.TwitterTimeline.superclass.constructor.call(this, "Extras.dashlet.TwitterTimeline", htmlId, ["selector", "event-delegate"]);
    };
 
    /**
@@ -637,6 +666,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           
           // Connect button
           this.widgets.connect = Dom.get(this.id + "-connect");
+
+          // Toolbar div
+          this.widgets.toolbar = Dom.get(this.id + "-toolbar");
           
           // Set up the Connect button
           this.widgets.connectButton = new YAHOO.widget.Button(
@@ -654,7 +686,15 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           // Utility links
           this.widgets.utils = Dom.get(this.id + "-utils");
           Event.addListener(this.id + "-link-disconnect", "click", this.onDisconnectClick, this, true);
-         
+
+          // New tweet link
+          Event.addListener(this.id + "-link-new-tweet", "click", this.onNewTweetClick, this, true);
+
+          // Delegate setting up the favorite/retweet/reply links
+          Event.delegate(this.widgets.timeline, "click", this.onTweetFavoriteClick, "a.twitter-favorite-link", this, true);
+          Event.delegate(this.widgets.timeline, "click", this.onTweetRetweetClick, "a.twitter-retweet-link", this, true);
+          Event.delegate(this.widgets.timeline, "click", this.onTweetReplyClick, "a.twitter-reply-link", this, true);
+          
          // TODO Check OAuth is supported and warn if not
          
          this.oAuth = new Extras.OAuthHelper().setOptions({
@@ -697,6 +737,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                          Dom.setStyle(this.widgets.connect, "display", "block");
                          // Enable the button
                          this.widgets.connectButton.set("disabled", false);
+                         // Display the toolbar
+                         Dom.setStyle(this.widgets.toolbar, "display", "block");
                      }
                  }, 
                  scope: this
@@ -769,6 +811,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           
           // Enable the Disconnect button
           Dom.setStyle(this.widgets.utils, "display", "block");
+          
+          // Display the toolbar
+          Dom.setStyle(this.widgets.toolbar, "display", "block");
           
           this.load();
       },
@@ -919,6 +964,73 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
             failureCallback:  p_obj.failureCallback
          });
       },
+      
+      /**
+       * Post a new tweet
+       *
+       * @method _postTweet
+       * @param replyToId {string} ID of tweet this is in reply to, null otherwise
+       * @param text {string} Text to prepopulate the textarea
+       */
+      _postTweet: function TwitterTimeline__postTweet(replyToId, text)
+      {
+         var panel = Alfresco.util.PopupManager.getUserInput({
+             title: this.msg("title.new-tweet"),
+             value: text || "",
+             callback:
+             {
+                 fn: function TwitterTimeline_onNewPostClick_postCB(value, obj) {
+                     if (value != null && value != "")
+                     {
+                         var dataObj = {
+                                 status: value
+                         };
+                         if (replyToId)
+                             dataObj.in_reply_to_status_id = replyToId;
+                         
+                         // Post the update
+                         this.oAuth.request({
+                             url: "/1/statuses/update.json",
+                             method: "POST",
+                             dataObj: dataObj,
+                             requestContentType: Alfresco.util.Ajax.FORM,
+                             successCallback: {
+                                 fn: function(o) {
+                                     if (o.responseText == "")
+                                     {
+                                         throw "Empty response received";
+                                     }
+                                     else
+                                     {
+                                         if (typeof o.json == "object")
+                                         {
+                                             var thtml = this._generateTweetsHTML([o.json]);
+                                             this._refreshDates(); // Refresh existing dates
+                                             this.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
+                                         }
+                                         else
+                                         {
+                                             throw "Could not parse JSON response";
+                                         }
+                                     }
+                                 },
+                                 scope: this
+                             },
+                             failureCallback: {
+                                 fn: function() {
+                                     Alfresco.util.PopupManager.displayMessage({
+                                         text: this.msg("error.post-tweet")
+                                     });
+                                 },
+                                 scope: this
+                             }
+                         });
+                     }
+                 },
+                 scope: this
+             }
+         });
+      },
 
       /**
        * YUI WIDGET EVENT HANDLERS
@@ -978,7 +1090,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
              buttons: [
                  {
                      text: Alfresco.util.message("button.ok", this.name),
-                     handler: function Yammer_onDisconnectClick_okClick() {
+                     handler: function TwitterTimeline_onDisconnectClick_okClick() {
                          me.oAuth.clearCredentials();
                          me.oAuth.saveCredentials();
                          // Remove existing messages
@@ -990,13 +1102,119 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                          // Disable the Disconnect button and More button
                          Dom.setStyle(me.widgets.utils, "display", "none");
                          Dom.setStyle(me.widgets.buttons, "display", "none");
+                         // Disable the toolbar
+                         Dom.setStyle(me.widgets.toolbar, "display", "none");
                          this.destroy();
                      },
                      isDefault: true
                  },
                  {
                      text: Alfresco.util.message("button.cancel", this.name),
-                     handler: function Yammer_onDisconnectClick_cancelClick() {
+                     handler: function TwitterTimeline_onDisconnectClick_cancelClick() {
+                         this.destroy();
+                     }
+                 }
+             ]
+         });
+      },
+      
+      /**
+       * Click handler for New Tweet link
+       *
+       * @method onNewTweetClick
+       * @param e {object} HTML event
+       */
+      onNewTweetClick: function TwitterTimeline_onNewPostClick(e, obj)
+      {
+         // Prevent default action
+         Event.stopEvent(e);
+         this._postTweet(null);
+      },
+      
+      /**
+       * Click handler for Reply link
+       *
+       * @method onTweetReplyClick
+       * @param e {object} HTML event
+       */
+      onTweetReplyClick: function TwitterTimeline_onTweetReplyClick(e, matchEl, obj)
+      {
+         // Prevent default action
+         Event.stopEvent(e);
+         
+         var tEl = matchEl.parentNode.parentNode.parentNode,
+             elId = tEl.id,
+             tId = elId.substring(elId.lastIndexOf("-") + 1), // Tweet id
+             snEl = Dom.getElementsByClassName("screen-name", "span" ,tEl)[0],
+             sn = snEl.textContent || snEl.innerText;
+         
+         this._postTweet(tId, "@" + sn + " ");
+      },
+      
+      /**
+       * Click handler for Retweet link
+       *
+       * @method onTweetRetweetClick
+       * @param e {object} HTML event
+       */
+      onTweetRetweetClick: function TwitterTimeline_onTweetRetweetClick(e, matchEl, obj)
+      {
+         // Prevent default action
+         Event.stopEvent(e);
+         
+         var elId = matchEl.parentNode.parentNode.parentNode.id,
+             tId = elId.substring(elId.lastIndexOf("-") + 1); // Tweet id
+         
+         var me = this;
+         
+         Alfresco.util.PopupManager.displayPrompt({
+             title: this.msg("title.retweet"),
+             text: this.msg("label.retweet"),
+             buttons: [
+                 {
+                     text: Alfresco.util.message("button.ok", this.name),
+                     handler: function TwitterTimeline_onRetweetClick_okClick() {
+                         me.oAuth.request({
+                             url: "/1/statuses/retweet/" + tId + ".json",
+                             method: "POST",
+                             successCallback: {
+                                 fn: function(o) {
+                                     if (o.responseText == "")
+                                     {
+                                         throw "Empty response received";
+                                     }
+                                     else
+                                     {
+                                         if (typeof o.json == "object")
+                                         {
+                                             var thtml = me._generateTweetsHTML([o.json]);
+                                             me._refreshDates(); // Refresh existing dates
+                                             me.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
+                                         }
+                                         else
+                                         {
+                                             throw "Could not parse JSON response";
+                                         }
+                                     }
+                                 },
+                                 scope: this
+                             },
+                             failureCallback: {
+                                 fn: function() {
+                                     Alfresco.util.PopupManager.displayMessage({
+                                         text: me.msg("error.retweet")
+                                     });
+                                 },
+                                 scope: this
+                             }
+                         });
+                         this.destroy();
+                     },
+                     isDefault: true
+                 },
+                 {
+                     text: Alfresco.util.message("button.cancel", this.name),
+                     handler: function TwitterTimeline_onDisconnectClick_cancelClick() {
                          this.destroy();
                      }
                  }

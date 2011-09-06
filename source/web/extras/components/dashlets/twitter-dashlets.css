@@ -123,3 +123,49 @@
     font-size: 90%;
     display: none;
 }
+.twitter-dashlet-toolbar
+{
+    display: none;
+}
+.twitter-actions
+{
+	display: none;
+}
+.user-tweet:HOVER .twitter-actions
+{
+	display: inline;
+}
+.user-tweet:HOVER
+{
+	background-color: #f2f8fd;
+}
+.twitter-favorite-link,
+.twitter-retweet-link,
+.twitter-reply-link
+{
+	display: inline;
+   background-image: url("twitter-spritev2-vertical.png");
+   background-repeat: no-repeat;
+	height: 16px;
+	overflow: hidden;
+   padding-left: 18px;
+   margin-left: 5px;
+   font-size: 85%;
+}
+.twitter-favorite-link span,
+.twitter-retweet-link span,
+.twitter-reply-link span
+{
+}
+.twitter-favorite-link
+{
+   background-position: 0px -48px;
+}
+.twitter-retweet-link
+{
+   background-position: 0px -96px;
+}
+.twitter-reply-link
+{
+   background-position: 0px -16px;
+}
