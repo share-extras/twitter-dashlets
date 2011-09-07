@@ -140,6 +140,7 @@
 	background-color: #f2f8fd;
 }
 .twitter-favorite-link,
+.twitter-favorite-link-on,
 .twitter-retweet-link,
 .twitter-reply-link
 {
@@ -153,13 +154,18 @@
    font-size: 85%;
 }
 .twitter-favorite-link span,
+.twitter-favorite-link-on span,
 .twitter-retweet-link span,
 .twitter-reply-link span
 {
 }
 .twitter-favorite-link
 {
-   background-position: 0px -48px;
+   background-position: 0px -49px;
+}
+.twitter-favorite-link-on
+{
+   background-position: 0px -65px;
 }
 .twitter-retweet-link
 {

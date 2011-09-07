@@ -398,7 +398,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           if (this.oAuth != null)
           {
               html += "<span class=\"twitter-actions\">\n";
-              //html += "<a href=\"\" class=\"twitter-favorite-link\"><span>" + this.msg("link.favorite") + "</span></a>\n";
+              html += "<a href=\"\" class=\"twitter-favorite-link" + (t.favorited ? "-on" : "") + "\"><span>" + this.msg("link.favorite") + "</span></a>\n";
               html += "<a href=\"\" class=\"twitter-retweet-link\"><span>" + this.msg("link.retweet") + "</span></a>\n";
               html += "<a href=\"\" class=\"twitter-reply-link\"><span>" + this.msg("link.reply") + "</span></a>\n";
               html += "</span>\n";
@@ -691,7 +691,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           Event.addListener(this.id + "-link-new-tweet", "click", this.onNewTweetClick, this, true);
 
           // Delegate setting up the favorite/retweet/reply links
-          Event.delegate(this.widgets.timeline, "click", this.onTweetFavoriteClick, "a.twitter-favorite-link", this, true);
+          Event.delegate(this.widgets.timeline, "click", this.onTweetFavoriteClick, "a.twitter-favorite-link, a.twitter-favorite-link-on", this, true);
           Event.delegate(this.widgets.timeline, "click", this.onTweetRetweetClick, "a.twitter-retweet-link", this, true);
           Event.delegate(this.widgets.timeline, "click", this.onTweetReplyClick, "a.twitter-reply-link", this, true);
           
@@ -870,6 +870,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          }
          
          this.widgets.timeline.innerHTML = html;
+         this.latestTweetId = this._getLatestTweetId();
          
          // Enable the Load More button
          this.widgets.moreButton.set("disabled", false);
@@ -1220,6 +1221,60 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                  }
              ]
          });
+      },
+      
+      /**
+       * Click handler for Favorite link
+       *
+       * @method onTweetFavoriteClick
+       * @param e {object} HTML event
+       */
+      onTweetFavoriteClick: function TwitterTimeline_onTweetFavoriteClick(e, matchEl, obj)
+      {
+         // Prevent default action
+         Event.stopEvent(e);
+         
+         var elId = Dom.getAncestorByClassName(matchEl, "user-tweet").id,
+             tId = elId.substring(elId.lastIndexOf("-") + 1), // Tweet id
+             isFavorite = Dom.hasClass(matchEl, "twitter-favorite-link-on"),
+             action = !isFavorite ? "create" : "destroy",
+             newClass = !isFavorite ? "twitter-favorite-link-on" : "twitter-favorite-link",
+             oldClass = !isFavorite ? "twitter-favorite-link" : "twitter-favorite-link-on",
+             errMsgId = !isFavorite ? "error.favorite" : "error.unfavorite";
+         
+         this.oAuth.request({
+             url: "/1/favorites/" + action + "/" + tId + ".json",
+             method: "POST",
+             successCallback: {
+                 fn: function(o) {
+                     if (o.responseText == "")
+                     {
+                         throw "Empty response received";
+                     }
+                     else
+                     {
+                         if (typeof o.json == "object")
+                         {
+                             Dom.addClass(matchEl, newClass);
+                             Dom.removeClass(matchEl, oldClass);
+                         }
+                         else
+                         {
+                             throw "Could not parse JSON response";
+                         }
+                     }
+                 },
+                 scope: this
+             },
+             failureCallback: {
+                 fn: function() {
+                     Alfresco.util.PopupManager.displayMessage({
+                         text: this.msg(errMsgId)
+                     });
+                 },
+                 scope: this
+             }
+         });
       }
       
    });
@@ -1342,6 +1397,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          }
          
          this.widgets.timeline.innerHTML = html;
+         this.latestTweetId = this._getLatestTweetId();
          
          // Enable the Load More button
          this.widgets.moreButton.set("disabled", false);
@@ -1629,6 +1685,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          }
          
          this.widgets.timeline.innerHTML = html;
+         this.latestTweetId = this._getLatestTweetId();
          
          // Empty the new tweets cache and remove any notification
          this.newTweets = [];
