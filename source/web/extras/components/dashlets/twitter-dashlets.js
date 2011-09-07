@@ -97,6 +97,15 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        },
 
        /**
+        * ID of the earlist known Tweet, not including newly-posted tweets from the current user
+        * 
+        * @property earliestTweetId
+        * @type string
+        * @default null
+        */
+       earliestTweetId: null,
+
+       /**
         * ID of the latest known Tweet, not including newly-posted tweets from the current user
         * 
         * @property latestTweetId
@@ -228,7 +237,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           {
              dataObj:
              {
-                maxId: this._getEarliestTweetId(),
+                maxId: this.earliestTweetId,
                 pageSize: this.options.pageSize + 1
              },
              successCallback:
@@ -253,8 +262,13 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        onExtensionLoaded: function TwitterBase_onExtensionLoaded(p_response, p_obj)
        {
+          var tweets = p_response.json.slice(1);
           this._refreshDates(); // Refresh existing dates
-          this.widgets.timeline.innerHTML += this._generateTweetsHTML(p_response.json.slice(1)); // Do not include duplicate tweet
+          if (tweets.length > 0)
+          {
+             this.widgets.timeline.innerHTML += this._generateTweetsHTML(tweets); // Do not include duplicate tweet
+             this.earliestTweetId = this._getEarliestTweetId(tweets);
+          }
           this.widgets.moreButton.set("disabled", false);
        },
        
@@ -426,47 +440,47 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        },
        
        /**
-        * Get the ID of the earliest Tweet in the timeline
+        * Get the ID of the earliest tweet a set of tweets, if later than the current known latest ID.
         * 
         * @method _getEarliestTweetId
         * @private
-        * @return {string} The ID of the earliest Tweet shown in the timeline, or null if
-        * no Tweets are available or the last Tweet has no compatible ID on its element
+        * @param {array} tweets Array of tweet objects
+        * @return {string} The ID of the earliest tweet, or null if no tweets are available
         */
-       _getEarliestTweetId: function TwitterBase__getEarliestTweetId()
+       _getEarliestTweetId: function TwitterBase__getEarliestTweetId(tweets)
        {
-          var div = Dom.getLastChild(this.widgets.timeline);
-          if (div !== null)
-          {
-             var id = Dom.getAttribute(div, "id");
-             if (id !== null && id.lastIndexOf("-") != -1)
-             {
-                return id.substring(id.lastIndexOf("-") + 1);
-             }
-          }
-          return null;
+           var earliestId = this.earliestTweetId, tid;
+           for (var i = 0; i < tweets.length; i++)
+           {
+              tid = tweets[i].id_str;
+              if (earliestId == null || tid.length < earliestId.length || tid < earliestId)
+              {
+                  earliestId = tid;
+              }
+           }
+           return earliestId;
        },
        
        /**
-        * Get the ID of the latest Tweet in the timeline
+        * Get the ID of the latest tweet a set of tweets, if earlier than the current known latest ID.
         * 
         * @method _getLatestTweetId
         * @private
-        * @return {string} The ID of the latest Tweet shown in the timeline, or null if
-        * no Tweets are available or the last Tweet has no compatible ID on its element
+        * @param {array} tweets Array of tweet objects
+        * @return {string} The ID of the latest tweet, or null if no tweets are available
         */
-       _getLatestTweetId: function TwitterBase__getLatestTweetId()
+       _getLatestTweetId: function TwitterBase__getLatestTweetId(tweets)
        {
-          var div = Dom.getFirstChild(this.widgets.timeline);
-          if (div !== null)
+          var latestId = this.latestTweetId, tid;
+          for (var i = 0; i < tweets.length; i++)
           {
-             var id = Dom.getAttribute(div, "id");
-             if (id !== null && id.lastIndexOf("-") != -1)
+             tid = tweets[i].id_str;
+             if (latestId == null || tid.length > latestId.length || tid > latestId)
              {
-                return id.substring(id.lastIndexOf("-") + 1);
+                 latestId = tid;
              }
           }
-          return null;
+          return latestId;
        },
 
        /**
@@ -605,8 +619,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
              }
              this._refreshDates(); // Refresh existing dates
              this.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
+             this.latestTweetId = this._getLatestTweetId(this.newTweets);
              this.newTweets = null;
-             this.latestTweetId = this._getLatestTweetId();
           }
           
           // Fade out the notification
@@ -870,7 +884,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          }
          
          this.widgets.timeline.innerHTML = html;
-         this.latestTweetId = this._getLatestTweetId();
+         this.latestTweetId = this._getLatestTweetId(tweets);
+         this.earliestTweetId = this._getEarliestTweetId(tweets);
          
          // Enable the Load More button
          this.widgets.moreButton.set("disabled", false);
@@ -1397,7 +1412,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          }
          
          this.widgets.timeline.innerHTML = html;
-         this.latestTweetId = this._getLatestTweetId();
+         this.latestTweetId = this._getLatestTweetId(tweets);
+         this.earliestTweetId = this._getEarliestTweetId(tweets);
          
          // Enable the Load More button
          this.widgets.moreButton.set("disabled", false);
@@ -1685,7 +1701,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          }
          
          this.widgets.timeline.innerHTML = html;
-         this.latestTweetId = this._getLatestTweetId();
+         this.latestTweetId = this._getLatestTweetId(tweets);
+         this.earliestTweetId = this._getEarliestTweetId(tweets);
          
          // Empty the new tweets cache and remove any notification
          this.newTweets = [];
