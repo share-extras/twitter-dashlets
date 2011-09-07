@@ -1142,7 +1142,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          // Prevent default action
          Event.stopEvent(e);
          
-         var tEl = matchEl.parentNode.parentNode.parentNode,
+         var tEl = Dom.getAncestorByClassName(matchEl, "tweet"),
              elId = tEl.id,
              tId = elId.substring(elId.lastIndexOf("-") + 1), // Tweet id
              snEl = Dom.getElementsByClassName("screen-name", "span" ,tEl)[0],
@@ -1162,7 +1162,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          // Prevent default action
          Event.stopEvent(e);
          
-         var elId = matchEl.parentNode.parentNode.parentNode.id,
+         var elId = Dom.getAncestorByClassName(matchEl, "user-tweet").id,
              tId = elId.substring(elId.lastIndexOf("-") + 1); // Tweet id
          
          var me = this;
@@ -1189,7 +1189,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                                          {
                                              var thtml = me._generateTweetsHTML([o.json]);
                                              me._refreshDates(); // Refresh existing dates
-                                             me.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
+                                             me.widgets.timeline.innerHTML = thtml + me.widgets.timeline.innerHTML;
                                          }
                                          else
                                          {
