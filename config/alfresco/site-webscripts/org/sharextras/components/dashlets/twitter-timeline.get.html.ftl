@@ -2,6 +2,7 @@
    new Extras.dashlet.TwitterTimeline("${args.htmlid}").setOptions(
    {
       "componentId": "${instance.object.id}",
+      "activeFilter": "${args.activeFilter!'home'}",
       "pageSize": ${(config.script['twitter-timeline'].pageSize?string)?number?c},
       "checkInterval": ${(config.script["twitter-timeline"].checkInterval?string)?number?c}
    }).setMessages(
@@ -13,7 +14,18 @@
 <div class="dashlet twitter-dashlet twitter-timeline">
    <div class="title" id="${args.htmlid}-title">${msg("header.timeline")}</div>
    <div class="twitter-dashlet-toolbar toolbar" id="${args.htmlid}-toolbar">
-      <a id="${args.htmlid}-link-new-tweet" class="theme-color-1" title="${msg('link.new-tweet')}" href="#">${msg('link.new-tweet')}</a>
+      <div class="actions">
+         <a id="${args.htmlid}-link-new-tweet" class="theme-color-1" title="${msg('link.new-tweet')}" href="#">${msg('link.new-tweet')}</a>
+      </div>
+      <div>
+	      <input id="${args.htmlid}-filter" type="button" name="filter" value="${msg("filter.home")}" />
+	      <select id="${args.htmlid}-filter-menu">
+	         <option value="home">${msg("filter.home")}</option>
+	         <option value="mentions">${msg("filter.mentions")}</option>
+	         <option value="favorites">${msg("filter.favorites")}</option>
+	         <option value="direct">${msg("filter.direct")}</option>        
+	      </select>
+      </div>
    </div>
    <div id="${args.htmlid}-body" class="body scrollableList" <#if args.height??>style="height: ${args.height}px;"</#if>>
       <div id="${args.htmlid}-notifications" class="notifications"></div>

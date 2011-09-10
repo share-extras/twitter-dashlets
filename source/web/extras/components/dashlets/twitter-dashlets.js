@@ -374,7 +374,14 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
              }
              else
              {
-                html += this._generateTweetHTML(t);
+                if (this.options.activeFilter == "direct")
+                {
+                   html += this._generateDirectMessageHTML(t);
+                }
+                else
+                {
+                   html += this._generateTweetHTML(t);
+                }
              }
           }
           return html;
@@ -668,6 +675,23 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
     */
    YAHOO.extend(Extras.dashlet.TwitterTimeline, Extras.dashlet.TwitterBase,
    {
+       /**
+        * Object container for initialization options
+        *
+        * @property options
+        * @type object
+        */
+       options: YAHOO.lang.merge(Extras.dashlet.TwitterBase.prototype.options,
+       {
+          /**
+           * Active filter value
+           * 
+           * @property activeFilter
+           * @type string
+           * @default "home"
+           */
+           activeFilter: "home"
+       }),
 
       /**
        * Fired by YUI when parent element is available for scripting
@@ -677,6 +701,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onReady: function TwitterTimeline_onReady()
       {
           Extras.dashlet.TwitterTimeline.superclass.onReady.call(this);
+          var me = this;
           
           // Connect button
           this.widgets.connect = Dom.get(this.id + "-connect");
@@ -708,6 +733,14 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           Event.delegate(this.widgets.timeline, "click", this.onTweetFavoriteClick, "a.twitter-favorite-link, a.twitter-favorite-link-on", this, true);
           Event.delegate(this.widgets.timeline, "click", this.onTweetRetweetClick, "a.twitter-retweet-link", this, true);
           Event.delegate(this.widgets.timeline, "click", this.onTweetReplyClick, "a.twitter-reply-link", this, true);
+          
+          // Dropdown filter
+          this.widgets.filter = new YAHOO.widget.Button(this.id + "-filter",
+          {
+             type: "split",
+             menu: this.id + "-filter-menu",
+             lazyloadmenu: false
+          });
           
          // TODO Check OAuth is supported and warn if not
          
@@ -828,8 +861,43 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           
           // Display the toolbar
           Dom.setStyle(this.widgets.toolbar, "display", "block");
+
+          // Set up filter menu - loading is triggerred via a click event
+          var me = this;
+
+          // Clear the lazyLoad flag and fire init event to get menu rendered into the DOM
+          var menu = this.widgets.filter.getMenu();
+          menu.subscribe("click", function (p_sType, p_aArgs)
+          {
+             var menuItem = p_aArgs[1];
+             if (menuItem)
+             {
+                me.widgets.filter.set("label", menuItem.cfg.getProperty("text"));
+                me.onFilterChanged.call(me, p_aArgs[1]);
+             }
+          });
           
-          this.load();
+          this.widgets.filter.value = this.options.activeFilter;
+
+          // Loop through and find the menuItem corresponding to the default filter
+          var menuItems = menu.getItems(),
+             menuItem,
+             i, ii;
+
+          for (i = 0, ii = menuItems.length; i < ii; i++)
+          {
+             menuItem = menuItems[i];
+             if (menuItem.value == this.options.activeFilter)
+             {
+                menu.clickEvent.fire(
+                {
+                   type: "click"
+                }, menuItem);
+                break;
+             }
+          }
+          
+          //this.load();
       },
       
       /**
@@ -928,6 +996,51 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       
       /**
+       * Generate HTML markup for a direct message
+       * 
+       * @method _generateDirectMessageHTML
+       * @private
+       * @param t {object} Tweet object to render into HTML
+       * @param rt {object} Retweet object, if the Tweet has been RT'ed
+       * @return {string} HTML markup
+       */
+      _generateDirectMessageHTML: function TwitterBase__generateDirectMessageHTML(t, rt)
+      {
+         var html = "", 
+            profileUri = "http://twitter.com/" + encodeURIComponent(t.sender.screen_name),
+            userLink = "<a href=\"" + profileUri + "\" title=\"" + $html(t.sender.name) + "\" class=\"theme-color-1\">" + $html(t.sender.screen_name) + "</a>",
+            postedRe = /([A-Za-z]{3}) ([A-Za-z]{3}) ([0-9]{2}) ([0-9]{2}:[0-9]{2}:[0-9]{2}) (\+[0-9]{4}) ([0-9]{4})/,
+            postedMatch = postedRe.exec(t.created_at),
+            postedOn = postedMatch != null ? (postedMatch[1] + ", " + postedMatch[3] + " " + postedMatch[2] + " " + postedMatch[6] + " " + postedMatch[4] + " GMT" + postedMatch[5]) : (t.created_at),
+            postedLink = "<a href=\"" + profileUri + "\/status\/" + encodeURIComponent(t.id_str) + "\"><span class=\"tweet-date\" title=\"" + postedOn + "\">" + this._relativeTime(new Date(postedOn)) + "</span><\/a>";
+
+         html += "<div class=\"user-tweet" + " detail-list-item\" id=\"" + $html(this.id) + "-tweet-" + $html(t.id_str) + "\">\n";
+         html += "<div class=\"user-icon\"><a href=\"" + profileUri + "\" title=\"" + $html(t.sender.name) + "\"><img src=\"" + $html(t.sender.profile_image_url) + "\" alt=\"" + $html(t.sender.screen_name) + "\" width=\"48\" height=\"48\" /></a></div>\n";
+         html += "<div class=\"tweet\">\n";
+         html += "<div class=\"tweet-hd\">\n";
+         html += "<span class=\"screen-name\">" + userLink + "</span> <span class=\"user-name\">" + $html(t.sender.name) + "</span>\n";
+         html += !YAHOO.lang.isUndefined(rt) ? " <span class=\"retweeted\">" + this.msg("label.retweetedBy", rt.sender.screen_name) + "</span>\n" : "";
+         html += "</div>\n";
+         html += "<div class=\"tweet-bd\">" + this._formatTweet(t.text) + "</div>\n";
+         html += "<div class=\"tweet-details\">\n";
+         html += "<span>" + postedLink + "</span>";
+         if (this.oAuth != null)
+         {
+             /*
+             html += "<span class=\"twitter-actions\">\n";
+             html += "<a href=\"\" class=\"twitter-favorite-link" + (t.favorited ? "-on" : "") + "\"><span>" + this.msg("link.favorite") + "</span></a>\n";
+             html += "<a href=\"\" class=\"twitter-retweet-link\"><span>" + this.msg("link.retweet") + "</span></a>\n";
+             html += "<a href=\"\" class=\"twitter-reply-link\"><span>" + this.msg("link.reply") + "</span></a>\n";
+             html += "</span>\n";
+             */
+         }
+         html += "</div>\n";
+         html += "</div>\n"; // end tweet
+         html += "</div>\n"; // end list-tweet
+         return html;
+      },
+      
+      /**
        * Get the current Twitter user or list ID
        * 
        * @method _getTwitterUser
@@ -951,16 +1064,14 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        * Request data from the web service
        * 
        * @method _request
+       * @private
+       * @param p_obj {object} Request parameters
        */
       _request: function TwitterTimeline__request(p_obj)
       {
-         var url;
-         var params = {};
-
-         url = "/1/statuses/home_timeline.json";
-         params = {
-                 per_page: p_obj.dataObj.pageSize || this.options.pageSize
-         };
+         var requestItems = this._getRequestItems(p_obj),
+             url = requestItems.uri,
+             params = requestItems.params;
 
          if (p_obj.dataObj.maxId != null)
          {
@@ -979,6 +1090,77 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
             successCallback: p_obj.successCallback,
             failureCallback:  p_obj.failureCallback
          });
+      },
+      
+      /**
+       * Generate request url and parameters based on the current active filter
+       * 
+       * @method _getRequestItems
+       * @private
+       * @param p_obj {object} Request parameters
+       */
+      _getRequestItems: function TwitterTimeline__getRequestItems(p_obj)
+      {
+         var uri = "", 
+         params = {
+                 per_page: p_obj.dataObj.pageSize || this.options.pageSize
+         };
+         switch (this.options.activeFilter)
+         {
+            case "home":
+               uri = '/1/statuses/home_timeline.json';
+               break;
+
+            case "mentions":
+               uri = '/1/statuses/mentions.json';
+               params.include_rts = 1;
+               break;
+
+            case "favorites":
+               uri = '/1/favorites.json';
+               break;
+
+            case "user":
+               uri = '/1/statuses/user_timeline.json';
+               params.include_rts = 1;
+               break;
+
+            case "direct":
+               uri = '/1/direct_messages.json';
+               break;
+         }
+         return {uri: uri, params: params };
+      },
+
+      /**
+       * Saves active filter to dashlet config
+       * 
+       * @method _setActiveFilter
+       * @private
+       * @param filter {string} New filter to set
+       * @param noPersist {boolean} [Optional] If set, preferences are not updated
+       */
+      _setActiveFilter: function TwitterTimeline_setActiveFilter(filter, noPersist)
+      {
+         this.options.activeFilter = filter;
+         this.load();
+         if (noPersist !== true)
+         {
+            // Persist state to the dashlet config
+            Alfresco.util.Ajax.jsonRequest(
+            {
+                method: "POST",
+                url: Alfresco.constants.URL_SERVICECONTEXT + "modules/dashlet/config/" + this.options.componentId,
+                dataObj:
+                {
+                    activeFilter: filter
+                },
+                successCallback: function(){},
+                successMessage: null,
+                failureCallback: function(){},
+                failureMessage: null
+            });
+         }
       },
       
       /**
@@ -1290,6 +1472,21 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                  scope: this
              }
          });
+      },
+      
+      /**
+       * Filter drop-down changed event handler
+       * @method onFilterChanged
+       * @param p_oMenuItem {object} Selected menu item
+       */
+      onFilterChanged: function TwitterTimeline_onFilterChanged(p_oMenuItem)
+      {
+         var filter = p_oMenuItem.value;
+         this.widgets.filter.value = filter;
+         this._setActiveFilter(filter);
+
+         this.newTweets = [];
+         this._refreshNotification();
       }
       
    });
@@ -1822,7 +2019,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
              params.since_id = p_obj.dataObj.minId;
          }
          
-         // Load the timeline
+         // Make the request
          Alfresco.util.Ajax.request(
          {
             url: url,

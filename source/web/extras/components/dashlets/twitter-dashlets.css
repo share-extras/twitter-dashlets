@@ -175,3 +175,9 @@
 {
    background-position: 0px -16px;
 }
+.twitter-dashlet .toolbar div.actions
+{
+    line-height: 2em;
+    min-height: 2em;
+    float: right;
+}
