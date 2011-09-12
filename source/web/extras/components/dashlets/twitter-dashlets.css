@@ -181,3 +181,18 @@
     min-height: 2em;
     float: right;
 }
+.twitter-char-count
+{
+	padding-top: 0.5em;
+	text-align: right;
+}
+.twitter-char-count
+{
+	padding-top: 0.5em;
+	text-align: right;
+	font-size: 1.2em;
+}
+.count-over
+{
+	color: red;
+}

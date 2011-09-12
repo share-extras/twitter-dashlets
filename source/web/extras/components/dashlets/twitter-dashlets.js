@@ -1172,62 +1172,141 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       _postTweet: function TwitterTimeline__postTweet(replyToId, text)
       {
-         var panel = Alfresco.util.PopupManager.getUserInput({
-             title: this.msg("title.new-tweet"),
-             value: text || "",
-             callback:
-             {
-                 fn: function TwitterTimeline_onNewPostClick_postCB(value, obj) {
-                     if (value != null && value != "")
-                     {
-                         var dataObj = {
-                                 status: value
-                         };
-                         if (replyToId)
-                             dataObj.in_reply_to_status_id = replyToId;
-                         
-                         // Post the update
-                         this.oAuth.request({
-                             url: "/1/statuses/update.json",
-                             method: "POST",
-                             dataObj: dataObj,
-                             requestContentType: Alfresco.util.Ajax.FORM,
-                             successCallback: {
-                                 fn: function(o) {
-                                     if (o.responseText == "")
+         text = text || "";
+         var id = Alfresco.util.generateDomId(),
+            maxCharCount = 160,
+            html = '<div><textarea id="' + id + '-input" tabindex="0">' + (text || "") + 
+               '</textarea></div><div id="' + id + '-count" class="twitter-char-count">' + (maxCharCount - text.length) + '</div>';
+         
+         var callBack = {
+             fn: function TwitterTimeline_onNewPostClick_postCB(value, obj) {
+                 if (value != null && value != "")
+                 {
+                     var dataObj = {
+                             status: value
+                     };
+                     if (replyToId)
+                         dataObj.in_reply_to_status_id = replyToId;
+                     
+                     // Post the update
+                     this.oAuth.request({
+                         url: "/1/statuses/update.json",
+                         method: "POST",
+                         dataObj: dataObj,
+                         requestContentType: Alfresco.util.Ajax.FORM,
+                         successCallback: {
+                             fn: function(o) {
+                                 if (o.responseText == "")
+                                 {
+                                     throw "Empty response received";
+                                 }
+                                 else
+                                 {
+                                     if (typeof o.json == "object")
                                      {
-                                         throw "Empty response received";
+                                         var thtml = this._generateTweetsHTML([o.json]);
+                                         this._refreshDates(); // Refresh existing dates
+                                         this.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
                                      }
                                      else
                                      {
-                                         if (typeof o.json == "object")
-                                         {
-                                             var thtml = this._generateTweetsHTML([o.json]);
-                                             this._refreshDates(); // Refresh existing dates
-                                             this.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
-                                         }
-                                         else
-                                         {
-                                             throw "Could not parse JSON response";
-                                         }
+                                         throw "Could not parse JSON response";
                                      }
-                                 },
-                                 scope: this
+                                 }
                              },
-                             failureCallback: {
-                                 fn: function() {
-                                     Alfresco.util.PopupManager.displayMessage({
-                                         text: this.msg("error.post-tweet")
-                                     });
-                                 },
-                                 scope: this
-                             }
-                         });
-                     }
-                 },
-                 scope: this
-             }
+                             scope: this
+                         },
+                         failureCallback: {
+                             fn: function() {
+                                 Alfresco.util.PopupManager.displayMessage({
+                                     text: this.msg("error.post-tweet")
+                                 });
+                             },
+                             scope: this
+                         }
+                     });
+                 }
+             },
+             scope: this
+         };
+         
+         // Create the dialog - returns instance of YAHOO.widget.SimpleDialog
+         this.widgets.postDialog = Alfresco.util.PopupManager.getUserInput({
+             title: this.msg("title.new-tweet"),
+             html: html,
+             buttons: [
+                {
+                   text: Alfresco.util.message("button.ok", this.name),
+                   handler: function TwitterTimeline_postTweet_okClick() {
+                      // Grab the input, destroy the pop-up, then callback with the value
+                      var value = null;
+                      if (Dom.get(id + "-input"))
+                      {
+                         value = Dom.get(id + "-input").value;
+                      }
+                      this.destroy();
+                      if (callBack.fn)
+                      {
+                         callBack.fn.call(callBack.scope || window, value, callBack.obj);
+                      }
+                   },
+                   isDefault: true
+                },
+                {
+                   text: Alfresco.util.message("button.cancel", this.name),
+                   handler: function TwitterTimeline_postTweet_cancelClick() {
+                      this.destroy();
+                   }
+                }
+             ]
          });
+         
+         // Cache a reference to the buttons
+         var buttons = this.widgets.postDialog.getButtons(); // Should be two YUI buttons
+
+         var onTextChange = function(e, obj) {
+             var left = maxCharCount - Dom.get(id + "-input").value.length
+             Dom.get(id + "-count").innerHTML = left;
+             if (left < 0)
+             {
+                // Add the count-over class
+                Dom.addClass(id + "-count", "count-over");
+                // Disable the OK button
+                buttons[0].set("disabled", true);
+             }
+             else
+             {
+                // Remove the count-over class
+                 Dom.removeClass(id + "-count", "count-over");
+                // Enable the OK button
+                 buttons[0].set("disabled", false);
+             }
+         };
+
+         Event.on(id + "-input", "keyup", onTextChange);
+         Event.on(id + "-input", "click", onTextChange);
+         
+         // Position cursor at end of textarea
+         // as per http://stackoverflow.com/questions/4715762/javascript-move-caret-to-last-character/4716021#4716021
+         var moveCaretToEnd = function (el) {
+             if (typeof el.selectionStart == "number") {
+                 el.selectionStart = el.selectionEnd = el.value.length;
+                 el.focus();
+             } else if (typeof el.createTextRange != "undefined") {
+                 el.focus();
+                 var range = el.createTextRange();
+                 range.collapse(false);
+                 range.select();
+             }
+         }
+         
+         moveCaretToEnd(Dom.get(id + "-input"));
+
+         // Work around Chrome's little problem
+         window.setTimeout(function() {
+             moveCaretToEnd(Dom.get(id + "-input"));
+         }, 1);
+
       },
 
       /**
