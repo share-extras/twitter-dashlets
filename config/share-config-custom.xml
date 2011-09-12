@@ -19,7 +19,7 @@
 	      <id>twitter-auth</id>
 	      <name>Twitter Authenticated API</name>
 	      <connector-id>twitter-oauth</connector-id>
-	      <endpoint-url>http://api.twitter.com</endpoint-url>
+	      <endpoint-url>https://api.twitter.com</endpoint-url>
 	    </endpoint>
 	    
 	    <endpoint>
