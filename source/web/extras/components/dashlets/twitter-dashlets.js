@@ -1174,7 +1174,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       {
          text = text || "";
          var id = Alfresco.util.generateDomId(),
-            maxCharCount = 160,
+            maxCharCount = 140,
             html = '<div><textarea id="' + id + '-input" tabindex="0">' + (text || "") + 
                '</textarea></div><div id="' + id + '-count" class="twitter-char-count">' + (maxCharCount - text.length) + '</div>';
          
