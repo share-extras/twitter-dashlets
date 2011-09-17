@@ -750,6 +750,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
              menu: this.id + "-filter-menu",
              lazyloadmenu: false
           });
+          this.widgets.filter.on("click", this.onFilterClicked, this, true);
           
          // TODO Check OAuth is supported and warn if not
          
@@ -1739,6 +1740,21 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          this.widgets.filter.value = filter;
          this._setActiveFilter(filter);
 
+         this.newTweets = [];
+         this._refreshNotification();
+      },
+
+      /**
+       * Filter button clicked event handler
+       * 
+       * @method onFilterClicked
+       * @param p_oEvent {object} Dom event
+       */
+      onFilterClicked: function TwitterTimeline_onFilterClicked(p_oEvent)
+      {
+         // Re-load tweets
+         this.load();
+         // Clear the notification
          this.newTweets = [];
          this._refreshNotification();
       }
