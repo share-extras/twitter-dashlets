@@ -189,8 +189,14 @@
 .twitter-char-count
 {
 	padding-top: 0.5em;
-	text-align: right;
+	float: right;
 	font-size: 1.2em;
+}
+.twitter-post-status
+{
+	padding-top: 0.8em;
+	line-height: 1.2em;
+	text-align: left;
 }
 .count-over
 {

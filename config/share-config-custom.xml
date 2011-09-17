@@ -36,6 +36,13 @@
 	      <endpoint-url>http://search.twitter.com</endpoint-url>
 	    </endpoint>
 	    
+	    <endpoint>
+	      <id>is-gd</id>
+	      <name>is.gd URL Shortener</name>
+	      <connector-id>http</connector-id>
+	      <endpoint-url>http://is.gd</endpoint-url>
+	    </endpoint>
+	    
 	  </remote>
 	</config>
 

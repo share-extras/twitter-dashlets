@@ -692,6 +692,15 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
            */
            activeFilter: "home"
        }),
+       
+       /**
+        * Array of two-valued arrays, storing the shortned links used by the 'new tweet' dialogue
+        * 
+        * @property shortenedLinks
+        * @type array
+        * @default []
+        */
+       shortenedLinks : [],
 
       /**
        * Fired by YUI when parent element is available for scripting
@@ -1173,10 +1182,15 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       _postTweet: function TwitterTimeline__postTweet(replyToId, text)
       {
          text = text || "";
-         var id = Alfresco.util.generateDomId(),
+         var me = this,
+            linkRe = new RegExp(/((http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?\^=%&:\/~\+#]*[\w\-\@?\^=%&\/~\+#])?)/gm),
+            shortLinkRe = new RegExp(/^http:\/\/is\.gd\//),
+            id = Alfresco.util.generateDomId(),
             maxCharCount = 140,
-            html = '<div><textarea id="' + id + '-input" tabindex="0">' + (text || "") + 
-               '</textarea></div><div id="' + id + '-count" class="twitter-char-count">' + (maxCharCount - text.length) + '</div>';
+            html = '<div><textarea id="' + id + '-input" tabindex="0">' + (text || "") + '</textarea>' +
+               '<input type="hidden" id="' + id + '-shortened"></input></div>' + 
+               '<div><div id="' + id + '-count" class="twitter-char-count">' + (maxCharCount - text.length) + '</div>' +
+               '<div id="' + id + '-status" class="twitter-post-status"></div></div>';
          
          var callBack = {
              fn: function TwitterTimeline_onNewPostClick_postCB(value, obj) {
@@ -1230,6 +1244,47 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
              scope: this
          };
          
+         /**
+          * Return short version of a link, if we know it, and if it is not a short URL itself
+          */
+         var shortenUrl = function(url) {
+            if (!shortLinkRe.test(url))
+            {
+               for (var i = 0; i < me.shortenedLinks.length; i++)
+               {
+                  if (me.shortenedLinks[i][0] == url && me.shortenedLinks[i][1])
+                  {
+                     return me.shortenedLinks[i][1];
+                  }
+               }
+            }
+            return url;
+         }
+
+         /**
+          * Return text
+          */
+         var getText = function() {
+            var value = null, input = Dom.get(id + "-input");
+            if (input)
+            {
+               value = input.value;
+            }
+            return value;
+         }
+
+         /**
+          * Return text, with all links that we are able to shorten, shortened
+          */
+         var getShortenedText = function() {
+            var value = getText();
+            if (value)
+            {
+               value = YAHOO.lang.trim(value.replace(linkRe, shortenUrl));
+            }
+            return value;
+         }
+         
          // Create the dialog - returns instance of YAHOO.widget.SimpleDialog
          this.widgets.postDialog = Alfresco.util.PopupManager.getUserInput({
              title: this.msg("title.new-tweet"),
@@ -1239,11 +1294,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                    text: Alfresco.util.message("button.ok", this.name),
                    handler: function TwitterTimeline_postTweet_okClick() {
                       // Grab the input, destroy the pop-up, then callback with the value
-                      var value = null;
-                      if (Dom.get(id + "-input"))
-                      {
-                         value = Dom.get(id + "-input").value;
-                      }
+                      var value = getShortenedText();
                       this.destroy();
                       if (callBack.fn)
                       {
@@ -1264,10 +1315,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          // Cache a reference to the buttons
          var buttons = this.widgets.postDialog.getButtons(); // Should be two YUI buttons
 
-         var onTextChange = function(e, obj) {
-             var left = maxCharCount - Dom.get(id + "-input").value.length
-             Dom.get(id + "-count").innerHTML = left;
-             if (left < 0)
+         var setCharsLeft = function(n) {
+             Dom.get(id + "-count").innerHTML = n;
+             if (n < 0)
              {
                 // Add the count-over class
                 Dom.addClass(id + "-count", "count-over");
@@ -1280,6 +1330,131 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                  Dom.removeClass(id + "-count", "count-over");
                 // Enable the OK button
                  buttons[0].set("disabled", false);
+             }
+         }
+         /**
+          * Return links in the given text that have not been shortned, and are not in the process of being shortened
+          * 
+          * @param text Input text
+          * @returns {array} Unique list of links which have not been shortened
+          */
+         var getUnshortenedLinks = function(text)
+         {
+            var m, link, links = [], found;
+            while ((m = linkRe.exec(text)) != null)
+            {
+               // Make sure link is not right at the end of the text (probably means we are still typing it)
+               if (linkRe.lastIndex == text.length)
+               {
+                  continue;
+               }
+               link = m[0];
+               if (!Alfresco.util.arrayContains(links, link)) // Check not already in array
+               {
+                  found = false;
+                  for (var i = 0; i < me.shortenedLinks.length && !found; i++)
+                  {
+                     if (me.shortenedLinks[i][0] == link)
+                     {
+                        found = true;
+                     }
+                  }
+                  if (!found)
+                  {
+                     links.push(link);
+                  }
+               }
+            }
+            return links;
+         }
+         var onTextChange = function(e, obj) {
+             // TODO Execute this on a timer
+             // First calculate the length based on what we know now, and set this
+             var text = getShortenedText();
+             setCharsLeft(maxCharCount - text.length);
+             
+             // Now, if there are any links that have not been shortened then we must call out for these
+             var unshortened = getUnshortenedLinks(getText()),
+                numLinks = unshortened.length,
+                numCompleted = 0,
+                link;
+             
+             if (unshortened.length > 0)
+             {
+                // Set the 'Shortening...' text
+                Dom.get(id + "-status").innerHTML = me.msg("label.status-shortening");
+                for (var i = 0; i < numLinks; i++)
+                {
+                   link = unshortened[i];
+                   // Add 'null' link to shortenedLinks to signify we are busy shortening it (prevents other events from trying the same)
+                   me.shortenedLinks.push([link, null]);
+                   
+                   // Make the XHR call
+                   Alfresco.util.Ajax.request(
+                   {
+                      url: Alfresco.constants.PROXY_URI.replace("/alfresco/", "/is-gd/") + "create.php",
+                      dataObj: {
+                         format: "json",
+                         url: link
+                      },
+                      successCallback: {
+                         fn: function shortenLink_onSuccess(p_obj) {
+                            // add short url to shortenedLinks, re-calculate chars left
+                            var json = Alfresco.util.parseJSON(p_obj.serverResponse.responseText), 
+                                shortLink = json.shorturl;
+                            
+                            for (var i = 0; i < me.shortenedLinks.length; i++)
+                            {
+                               if (me.shortenedLinks[i][0] == link)
+                               {
+                                  me.shortenedLinks[i][1] = shortLink;
+                               }
+                               setCharsLeft(maxCharCount - getShortenedText().length);
+                            }
+                            // increment numCompleted, unset the 'Shortening...' only if numCompleted == numLinks
+                            numCompleted ++;
+                            if (numCompleted == numLinks)
+                            {
+                               Dom.get(id + "-status").innerHTML = me.msg("label.status-shortened");
+                               YAHOO.lang.later(1500, me, function() {
+                                  if (Dom.get(id + "-status").innerHTML == me.msg("label.status-shortened"))
+                                  {
+                                     Dom.get(id + "-status").innerHTML = "";
+                                  }
+                               });
+                            }
+                         },
+                         scope: this
+                      },
+                      failureCallback: {
+                         fn: function shortenLink_onFailure(p_obj) {
+                            // remove null value from shortenedLinks to signal we have finished shortening it
+                            for (var i = 0; i < me.shortenedLinks.length; i++)
+                            {
+                               if (me.shortenedLinks[i][0] == link)
+                               {
+                                  me.shortenedLinks.splice(i, 1);
+                               }
+                            }
+                            // increment numCompleted, unset the 'Shortening...' only if numCompleted == numLinks
+                            numCompleted ++;
+                            if (numCompleted == numLinks)
+                            {
+                               Dom.get(id + "-status").innerHTML = me.msg("label.status-shortened");
+                               YAHOO.lang.later(1500, me, function() {
+                                  if (Dom.get(id + "-status").innerHTML == me.msg("label.status-shortened"))
+                                  {
+                                     Dom.get(id + "-status").innerHTML = "";
+                                  }
+                               });
+                            }
+                         },
+                         scope: this
+                      },
+                      scope: this,
+                      noReloadOnAuthFailure: true
+                   });
+                }
              }
          };
 
