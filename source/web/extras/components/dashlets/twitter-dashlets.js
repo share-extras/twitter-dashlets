@@ -787,6 +787,16 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                                  }
                              });
                          }
+                         else // Incomplete verifier info, possible we were not redirected
+                         {
+                             this.oAuth.clearCredentials();
+                             // Display the Connect information and button
+                             Dom.setStyle(this.widgets.connect, "display", "block");
+                             // Enable the button
+                             this.widgets.connectButton.set("disabled", false);
+                             // Display the toolbar
+                             Dom.setStyle(this.widgets.toolbar, "display", "block");
+                         }
                      }
                      else // Not connected at all
                      {
