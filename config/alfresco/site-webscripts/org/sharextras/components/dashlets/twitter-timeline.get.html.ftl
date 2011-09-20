@@ -13,7 +13,7 @@
 
 <div class="dashlet twitter-dashlet twitter-timeline">
    <div class="title" id="${args.htmlid}-title">${msg("header.timeline")}</div>
-   <div class="twitter-dashlet-toolbar toolbar" id="${args.htmlid}-toolbar">
+   <div class="twitter-dashlet-toolbar toolbar flat-button" id="${args.htmlid}-toolbar">
       <div class="actions">
          <a id="${args.htmlid}-link-new-tweet" class="theme-color-1" title="${msg('link.new-tweet')}" href="#">${msg('link.new-tweet')}</a>
       </div>
