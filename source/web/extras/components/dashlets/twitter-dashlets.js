@@ -794,8 +794,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                              Dom.setStyle(this.widgets.connect, "display", "block");
                              // Enable the button
                              this.widgets.connectButton.set("disabled", false);
-                             // Display the toolbar
-                             Dom.setStyle(this.widgets.toolbar, "display", "block");
+                             // Hide the toolbar
+                             Dom.setStyle(this.widgets.toolbar, "display", "none");
                          }
                      }
                      else // Not connected at all
@@ -804,8 +804,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                          Dom.setStyle(this.widgets.connect, "display", "block");
                          // Enable the button
                          this.widgets.connectButton.set("disabled", false);
-                         // Display the toolbar
-                         Dom.setStyle(this.widgets.toolbar, "display", "block");
+                         // Hide the toolbar
+                         Dom.setStyle(this.widgets.toolbar, "display", "none");
                      }
                  }, 
                  scope: this
