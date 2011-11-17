@@ -156,6 +156,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           
           // The dashlet title container
           this.widgets.title = Dom.get(this.id + "-title");
+
+          // Loading icon div
+          this.widgets.loading = Dom.get(this.id + "-loading");
           
           // The dashlet body container
           this.widgets.body = Dom.get(this.id + "-body");
@@ -186,6 +189,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        load: function TwitterBase_load()
        {
+          this._showLoading();
           // Load the timeline
           this._request(
           {
@@ -215,6 +219,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        onLoadSuccess: function TwitterBase_onLoadSuccess(p_response, p_obj)
        {
+          this._hideLoading();
        },
 
        /**
@@ -226,6 +231,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        onLoadFailure: function TwitterBase_onLoadFailure(p_response, p_obj)
        {
+          this._hideLoading();
        },
 
        /**
@@ -235,6 +241,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        extend: function TwitterBase_extend()
        {
+          this._showLoading();
           // Load the user timeline
           this._request(
           {
@@ -265,6 +272,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        onExtensionLoaded: function TwitterBase_onExtensionLoaded(p_response, p_obj)
        {
+          this._hideLoading();
           var tweets = p_response.json.slice(1);
           this._refreshDates(); // Refresh existing dates
           if (tweets.length > 0)
@@ -284,6 +292,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        onExtensionLoadFailure: function TwitterBase_onExtensionLoadFailure(p_response, p_obj)
        {
+          this._hideLoading();
           Alfresco.util.PopupManager.displayMessage(
           {
              text: this.msg("message.extendFailed")
@@ -303,6 +312,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        {
           // Refresh existing dates
           this._refreshDates();
+          
+          // Show loading icon
+          this._showLoading();
            
           // Load the user timeline
           this._request(
@@ -333,6 +345,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        onNewTweetsLoaded: function TwitterBase_onNewTweetsLoaded(p_response, p_obj)
        {
+          this._hideLoading();
           this.newTweets = p_response.json;
           this._refreshNotification();
           
@@ -349,6 +362,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        onNewTweetsLoadFailure: function TwitterBase_onNewTweetsLoadFailure(p_response, p_obj)
        {
+          this._hideLoading();
           // Schedule a new poll
           this._resetTimer();
        },
@@ -586,6 +600,32 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        _request: function TwitterBase__request(p_obj)
        {
+       },
+
+       /**
+        * Hide the loading icon
+        *
+        * @method _hideLoading
+        */
+       _hideLoading: function TwitterTimeline__hideLoading()
+       {
+           if (this.widgets.loading != null)
+           {
+               Dom.setStyle(this.widgets.loading, "display", "none");
+           }
+       },
+
+       /**
+        * Show the loading icon
+        *
+        * @method _showLoading
+        */
+       _showLoading: function TwitterTimeline__showLoading()
+       {
+           if (this.widgets.loading != null)
+           {
+               Dom.setStyle(this.widgets.loading, "display", "inline");
+           }
        },
 
        /**
@@ -944,6 +984,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       onLoadSuccess: function TwitterTimeline_onLoadSuccess(p_response, p_obj)
       {
+         this._hideLoading();
          // Update the dashlet title
          this.widgets.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
          
@@ -995,6 +1036,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       onLoadFailure: function TwitterTimeline_onLoadFailure(p_response, p_obj)
       {
+         this._hideLoading();
          // Update the dashlet title
          this.widgets.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
           
@@ -1889,6 +1931,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       onLoadSuccess: function TwitterUserTimeline_onLoadSuccess(p_response, p_obj)
       {
+         this._hideLoading();
          // Update the dashlet title
          this.widgets.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
          
@@ -1940,6 +1983,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       onLoadFailure: function TwitterUserTimeline_onLoadFailure(p_response, p_obj)
       {
+         this._hideLoading();
          // Update the dashlet title
          this.widgets.title.innerHTML = this.msg("header.userTimeline", this._getTwitterUser());
           
@@ -2185,6 +2229,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       onLoadSuccess: function TwitterSearch_onLoadSuccess(p_response, p_obj)
       {
+         this._hideLoading();
          // Update the dashlet title
          this.widgets.title.innerHTML = this.msg("header.search", encodeURIComponent(this._getSearchTerm()), this._getSearchTerm());
          
@@ -2233,6 +2278,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       onLoadFailure: function TwitterSearch_onLoadFailure(p_response, p_obj)
       {
+         this._hideLoading();
          // Update the dashlet title
          this.widgets.title.innerHTML = this.msg("header.search", encodeURIComponent(this._getSearchTerm()), this._getSearchTerm());
          
@@ -2253,6 +2299,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       onExtensionLoaded: function TwitterSearch_onExtensionLoaded(p_response, p_obj)
       {
+         this._hideLoading();
          this._refreshDates(); // Refresh existing dates
          this.widgets.timeline.innerHTML += this._generateTweetsHTML(p_response.json.results.slice(1)); // Do not include duplicate tweet
          this.widgets.moreButton.set("disabled", false);

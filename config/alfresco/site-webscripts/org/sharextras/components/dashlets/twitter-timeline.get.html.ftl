@@ -25,6 +25,7 @@
 	         <option value="favorites">${msg("filter.favorites")}</option>
 	         <option value="direct">${msg("filter.direct")}</option>        
 	      </select>
+          <span id="${args.htmlid}-loading" class="twitter-dashlet-loading"><span>loading</span></span>
       </div>
    </div>
    <div id="${args.htmlid}-body" class="body scrollableList" <#if args.height??>style="height: ${args.height}px;"</#if>>

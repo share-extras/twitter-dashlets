@@ -203,3 +203,17 @@
 {
 	color: red;
 }
+.twitter-dashlet-loading
+{
+    display: none;
+    width: 16px;
+    background-image: url("../../../components/images/ajax_anim.gif");
+    background-repeat: no-repeat;
+    background-position: left center;
+    position: relative;
+    top: -5px;
+}
+.twitter-dashlet-loading span
+{
+	visibility: hidden;
+}
