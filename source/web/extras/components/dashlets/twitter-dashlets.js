@@ -157,6 +157,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           // The dashlet title container
           this.widgets.title = Dom.get(this.id + "-title");
           
+          // The dashlet body container
+          this.widgets.body = Dom.get(this.id + "-body");
+          
           // The new tweets notification container
           this.widgets.notifications = Dom.get(this.id + "-notifications");
           Event.addListener(this.widgets.notifications, "click", this.onShowNewClick, null, this);
@@ -795,7 +798,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                              // Enable the button
                              this.widgets.connectButton.set("disabled", false);
                              // Hide the toolbar
-                             Dom.setStyle(this.widgets.toolbar, "display", "none");
+                             this._hideToolbar();
                          }
                      }
                      else // Not connected at all
@@ -805,7 +808,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                          // Enable the button
                          this.widgets.connectButton.set("disabled", false);
                          // Hide the toolbar
-                         Dom.setStyle(this.widgets.toolbar, "display", "none");
+                         this._hideToolbar();
                      }
                  }, 
                  scope: this
@@ -880,7 +883,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           Dom.setStyle(this.widgets.utils, "display", "block");
           
           // Display the toolbar
-          Dom.setStyle(this.widgets.toolbar, "display", "block");
+          this._showToolbar();
 
           // Set up filter menu - loading is triggerred via a click event
           var me = this;
@@ -1496,6 +1499,26 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       },
 
       /**
+       * Hide the dashlet toolbar
+       *
+       * @method _hideToolbar
+       */
+      _hideToolbar: function TwitterTimeline__hideToolbar()
+      {
+          Dom.setStyle(this.widgets.toolbar, "display", "none");
+      },
+
+      /**
+       * Show the dashlet toolbar
+       *
+       * @method _showToolbar
+       */
+      _showToolbar: function TwitterTimeline__showToolbar()
+      {
+          Dom.setStyle(this.widgets.toolbar, "display", "block");
+      },
+
+      /**
        * YUI WIDGET EVENT HANDLERS
        * Handlers for standard events fired from YUI widgets, e.g. "click"
        */
@@ -1566,7 +1589,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                          Dom.setStyle(me.widgets.utils, "display", "none");
                          Dom.setStyle(me.widgets.buttons, "display", "none");
                          // Disable the toolbar
-                         Dom.setStyle(me.widgets.toolbar, "display", "none");
+                         me._hideToolbar();
                          this.destroy();
                      },
                      isDefault: true
