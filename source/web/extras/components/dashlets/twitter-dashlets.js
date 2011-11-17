@@ -1235,6 +1235,10 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                                          var thtml = this._generateTweetsHTML([o.json]);
                                          this._refreshDates(); // Refresh existing dates
                                          this.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
+
+                                         Alfresco.util.PopupManager.displayMessage({
+                                             text: this.msg("message.post-tweet")
+                                         });
                                      }
                                      else
                                      {
@@ -1676,6 +1680,10 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                                              var thtml = me._generateTweetsHTML([o.json]);
                                              me._refreshDates(); // Refresh existing dates
                                              me.widgets.timeline.innerHTML = thtml + me.widgets.timeline.innerHTML;
+                                             
+                                             Alfresco.util.PopupManager.displayMessage({
+                                                 text: me.msg("message.retweet")
+                                             });
                                          }
                                          else
                                          {
