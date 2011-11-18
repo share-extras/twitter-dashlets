@@ -48,3 +48,8 @@ Using the dashlet
 Log in to Alfresco Share and navigate to a site dashboard. Click the 
 Customize Dashboard button to edit the contents of the dashboard and drag 
 one of the dashlets into one of the columns.
+
+Credits
+-------
+
+Connect and disconnect icons from LED icon pack by LED 24 - http://findicons.com/icon/178350/connect

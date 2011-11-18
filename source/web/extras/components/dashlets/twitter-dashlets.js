@@ -774,6 +774,11 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
              }
           );
           
+          // titleBarActions
+          Dom.getElementsByClassName ("titleBarActions", "div", this.id, function(el) {
+              this.widgets.titleBarActions = el;
+          }, this, true);
+          
           // Utility links
           this.widgets.utils = Dom.get(this.id + "-utils");
           Event.addListener(this.id + "-link-disconnect", "click", this.onDisconnectClick, this, true);
@@ -920,7 +925,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           Dom.setStyle(this.widgets.connect, "display", "none");
           
           // Enable the Disconnect button
-          Dom.setStyle(this.widgets.utils, "display", "block");
+          this._showDisconnectButton();
           
           // Display the toolbar
           this._showToolbar();
@@ -1565,6 +1570,44 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       },
 
       /**
+       * Hide the disconnect button
+       *
+       * @method _hideDisconnectButton
+       */
+      _hideDisconnectButton: function TwitterTimeline__hideDisconnectButton()
+      {
+          if (this.widgets.titleBarActions != null)
+          {
+              Dom.getElementsByClassName ("disconnect", "div", this.widgets.titleBarActions, function(el) {
+                  Dom.setStyle(el, "display", "none");
+              }, this, true);
+          }
+          else
+          {
+              Dom.setStyle(this.widgets.utils, "display", "none");
+          }
+      },
+
+      /**
+       * Show the disconnect button
+       *
+       * @method _showDisconnectButton
+       */
+      _showDisconnectButton: function TwitterTimeline__showDisconnectButton()
+      {
+          if (this.widgets.titleBarActions != null)
+          {
+              Dom.getElementsByClassName ("disconnect", "div", this.widgets.titleBarActions, function(el) {
+                  Dom.setStyle(el, "display", "block");
+              }, this, true);
+          }
+          else
+          {
+              Dom.setStyle(this.widgets.utils, "display", "block");
+          }
+      },
+
+      /**
        * YUI WIDGET EVENT HANDLERS
        * Handlers for standard events fired from YUI widgets, e.g. "click"
        */
@@ -1609,7 +1652,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        * @method onDisconnectClick
        * @param e {object} HTML event
        */
-      onDisconnectClick: function TwitterTimeline_onDisconnectClick(e, obj)
+      onDisconnectClick: function TwitterTimeline_onDisconnectClick(e)
       {
          // Prevent default action
          Event.stopEvent(e);
@@ -1627,15 +1670,17 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                          me.oAuth.saveCredentials();
                          // Remove existing messages
                          me.widgets.timeline.innerHTML = "";
+                         me.newTweets = [];
+                         me._refreshNotification.call(me);
                          // Display the Connect information and button
                          Dom.setStyle(me.widgets.connect, "display", "block");
                          // Enable the Connect button
                          me.widgets.connectButton.set("disabled", false);
                          // Disable the Disconnect button and More button
-                         Dom.setStyle(me.widgets.utils, "display", "none");
+                         me._hideDisconnectButton.call(me);
                          Dom.setStyle(me.widgets.buttons, "display", "none");
                          // Disable the toolbar
-                         me._hideToolbar();
+                         me._hideToolbar.call(me);
                          this.destroy();
                      },
                      isDefault: true

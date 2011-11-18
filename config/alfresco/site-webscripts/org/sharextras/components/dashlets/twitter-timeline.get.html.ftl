@@ -1,5 +1,5 @@
 <script type="text/javascript">//<![CDATA[
-   new Extras.dashlet.TwitterTimeline("${args.htmlid}").setOptions(
+   var timeline = new Extras.dashlet.TwitterTimeline("${args.htmlid}").setOptions(
    {
       "componentId": "${instance.object.id}",
       "activeFilter": "${args.activeFilter!'home'}",
@@ -9,6 +9,32 @@
       ${messages}
    );
    new Alfresco.widget.DashletResizer("${args.htmlid}", "${instance.object.id}");
+
+   if (typeof Alfresco.widget.DashletTitleBarActions == "function")
+   {
+       var disconnectEvent = new YAHOO.util.CustomEvent("onDisconnectClick");
+       disconnectEvent.subscribe(timeline.onDisconnectClick, timeline, true);
+    
+       new Alfresco.widget.DashletTitleBarActions("${args.htmlid}").setOptions(
+       {
+          actions:
+          [
+             {
+                cssClass: "disconnect",
+                eventOnClick: disconnectEvent,
+                tooltip: "${msg("dashlet.disconnect.tooltip")?js_string}"
+             },
+             {
+                cssClass: "help",
+                bubbleOnClick:
+                {
+                   message: "${msg("dashlet.help")?js_string}"
+                },
+                tooltip: "${msg("dashlet.help.tooltip")?js_string}"
+             }
+          ]
+       });
+   }
 //]]></script>
 
 <div class="dashlet twitter-dashlet twitter-timeline">
