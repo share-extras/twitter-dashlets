@@ -189,7 +189,13 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        load: function TwitterBase_load()
        {
+          // Reset earliest and latest tweet IDs
+          this.earliestTweetId = null;
+          this.latestTweetId = null;
+          
+          // Show the loading spinner
           this._showLoading();
+          
           // Load the timeline
           this._request(
           {
