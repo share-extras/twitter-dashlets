@@ -149,8 +149,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        onReady: function TwitterBase_onReady()
        {
-          Event.addListener(this.id + "-configure-link", "click", this.onConfigClick, this, true);
-          
           // The user timeline container
           this.widgets.timeline = Dom.get(this.id + "-timeline");
           
