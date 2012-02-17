@@ -464,9 +464,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        _formatTweet: function TwitterBase__formatTweet(text)
        {
           return text.replace(
-                /https?:\/\/\S+[^\s.]/gm, "<a href=\"$&\">$&</a>").replace(
-                /@(\w+)/gm, "<a href=\"http://twitter.com/$1\">$&</a>").replace(
-                /#(\w+)/gm, "<a href=\"http://twitter.com/search?q=%23$1\">$&</a>");
+                /https?:\/\/\S+[^\s.]/gm, "<a href=\"$&\" target=\"_blank\">$&</a>").replace(
+                /@(\w+)/gm, "<a href=\"http://twitter.com/$1\" target=\"_blank\">$&</a>").replace(
+                /#(\w+)/gm, "<a href=\"http://twitter.com/search?q=%23$1\" target=\"_blank\">$&</a>");
        },
        
        /**
