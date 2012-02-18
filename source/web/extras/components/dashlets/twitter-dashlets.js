@@ -178,6 +178,176 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                 }
              }
           );
+
+          // Delegate setting up the favorite/retweet/reply links
+          Event.delegate(this.widgets.timeline, "click", this.onTweetFavoriteClick, "a.twitter-favorite-link, a.twitter-favorite-link-on", this, true);
+          Event.delegate(this.widgets.timeline, "click", this.onTweetRetweetClick, "a.twitter-retweet-link", this, true);
+          Event.delegate(this.widgets.timeline, "click", this.onTweetReplyClick, "a.twitter-reply-link", this, true);
+
+          if (typeof Extras.OAuthHelper == "function")
+          {
+             this.oAuth = new Extras.OAuthHelper().setOptions({
+                providerId: "twitter",
+                endpointId: "twitter-auth",
+                requestTokenCallbackUri: window.location.href + "?cmpt_htmlid="  + encodeURIComponent(this.id)
+            });
+            this._oAuthInit();
+          }
+       },
+       
+       /**
+        * (Re-)initialise the OAuth service. This loads data from the repo and will fire off the relevant 
+        * handler methods based on the authorisation status.
+        * 
+        * @method _oAuthInit
+        * @private
+        */
+       _oAuthInit: function TwitterBase__oAuthInit()
+       {
+          this.oAuth.init({
+              successCallback: { 
+                  fn: function TwitterBase_onReady_oAuthInit()
+                  {
+                      if (this.oAuth.isAuthorized()) // An access token exists
+                      {
+                          // Run the success handler directly to load the messages
+                          this.onAuthSuccess();
+                      }
+                      else if (this.oAuth.hasToken()) // Found a request token (TODO persist verifier via a web script and redirect user back)
+                      {
+                          // Get verifier from URL
+                          var verifier = Alfresco.util.getQueryStringParameter("oauth_verifier", window.location.href),
+                              cid = Alfresco.util.getQueryStringParameter("cmpt_htmlid", window.location.href);
+                          if (verifier != null && cid != null && cid == this.id)
+                          {
+                              this.oAuth.requestAccessToken(this.oAuth.authData, verifier, {
+                                  successCallback: {
+                                      fn: this.onAccessTokenGranted,
+                                      scope: this
+                                  },
+                                  failureHandler: {
+                                      fn: this.onAuthFailure,
+                                      scope: this
+                                  }
+                              });
+                              
+                          }
+                          else // Incomplete verifier info, possible we were not redirected or another dashlet is attempting to request the access token
+                          {
+                              this.onRequestTokenAvailable();
+                          }
+                      }
+                      else // Not connected at all
+                      {
+                         this.onNoTokenAvailable();
+                      }
+                  }, 
+                  scope: this
+              },
+              failureHandler: { 
+                  fn: function TwitterBase_onReady_oAuthInit() {
+                      // Failed to init the oauth helper, e.g. credentials not loaded
+                      Alfresco.util.PopupManager.displayMessage({
+                          text: this.msg("error.initOAuth")
+                      });
+                  }, 
+                  scope: this
+              }
+          });
+       },
+       
+       /**
+        * Callback method used to prompt the user for a verification code to confirm that the
+        * application has been granted access
+        * 
+        * @method onRequestTokenGranted
+        * @param {object} obj Object literal containing properties
+        *    authParams {object} Parameters received from get token stage
+        *    onComplete {function} the callback function to be called to pass back the value provided by the user
+        */
+       onRequestTokenGranted: function TwitterBase_onRequestTokenGranted(obj)
+       {
+           Alfresco.util.assertNotEmpty(obj);
+           Alfresco.util.assertNotEmpty(obj.authParams);
+           Alfresco.util.assertNotEmpty(obj.onComplete);
+           
+           var authToken = obj.authParams.oauth_token,
+               callbackConfirmed = obj.authParams.oauth_callback_confirmed,
+               callbackFn = obj.onComplete,
+               authorizationUrl = "http://api.twitter.com/oauth/authorize?oauth_token=" + authToken;
+           
+           if (callbackConfirmed == "true")
+           {
+               // Save the request token data
+               this.oAuth.saveCredentials({
+                   successCallback: {
+                       fn: function() {
+                           // Navigate to the authorization page
+                           window.location.href = authorizationUrl;
+                       },
+                       scope: this
+                   }
+               });
+           }
+           else
+           {
+               Alfresco.util.PopupManager.displayMessage({
+                   text: "Callback was not confirmed"
+               });
+           }
+       },
+       
+       /**
+        * Callback method for successful negotiation of an access token
+        * 
+        * @method onAccessTokenGranted
+        */
+       onAccessTokenGranted: function TwitterBase_onAccessTokenGranted(obj)
+       {
+          //this.onAuthSuccess();
+          // Remove the URL query string parameters as we are now finished with them
+          window.location.replace(window.location.href.substring(0, window.location.href.indexOf("?")));
+       },
+       
+       /**
+        * Callback method to use to set up the dashlet when it is known that the authentication
+        * has completed successfully
+        * 
+        * @method onAuthSuccess
+        */
+       onAuthSuccess: function TwitterBase_onAuthSuccess()
+       {
+           // Implementation provided by sub-class
+       },
+       
+       /**
+        * Callback method when a problem occurs with the authentication
+        * 
+        * @method onAuthFailure
+        */
+       onAuthFailure: function TwitterBase_onAuthFailure()
+       {
+           Alfresco.util.PopupManager.displayMessage({
+               text: this.msg("error.general")
+           });
+       },
+       
+       /**
+        * Callback method for when a request token is available, but not an access token
+        * 
+        * @method onRequestTokenAvailable
+        */
+       onRequestTokenAvailable: function TwitterBase_onRequestTokenAvailable()
+       {
+       },
+       
+       /**
+        * Callback method for when OAuth token is not available
+        * 
+        * @method onNoTokenAvailable
+        */
+       onNoTokenAvailable: function TwitterBase_onNoTokenAvailable()
+       {
        },
 
        /**
@@ -437,7 +607,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           html += "<div class=\"tweet-bd\">" + this._formatTweet(t.text) + "</div>\n";
           html += "<div class=\"tweet-details\">\n";
           html += "<span>" + this.msg("text.tweetDetails", postedLink, t.source) + "</span>";
-          if (this.oAuth != null)
+          if (this.oAuth != null && this.oAuth.isAuthorized())
           {
               html += "<span class=\"twitter-actions\">\n";
               html += "<a href=\"\" class=\"twitter-favorite-link" + (t.favorited ? "-on" : "") + "\"><span>" + this.msg("link.favorite") + "</span></a>\n";
@@ -601,9 +771,44 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * Request data from the web service
         * 
         * @method _request
+        * @private
         */
        _request: function TwitterBase__request(p_obj)
        {
+       },
+       
+       /**
+        * Make ajax request to the web service
+        * 
+        * @method _requestAjax
+        * @private
+        */
+       _requestAjax: function TwitterBase__requestAjax(p_obj)
+       {
+          if (this.oAuth != null && this.oAuth.isAuthorized())
+          {
+             // Load the timeline via OAuth
+             this.oAuth.request(
+             {
+                url: p_obj.url,
+                dataObj: p_obj.params,
+                successCallback: p_obj.successCallback,
+                failureCallback:  p_obj.failureCallback
+             });
+          }
+          else
+          {
+             // Load the timeline via regular XHR
+             Alfresco.util.Ajax.request(
+             {
+                url: Alfresco.constants.PROXY_URI.replace("/alfresco/", "/" + p_obj.endpoint + "/") + p_obj.url,
+                dataObj: p_obj.params,
+                successCallback: p_obj.successCallback,
+                failureCallback: p_obj.failureCallback,
+                scope: this,
+                noReloadOnAuthFailure: true
+             });
+          }
        },
 
        /**
@@ -611,7 +816,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         *
         * @method _hideLoading
         */
-       _hideLoading: function TwitterTimeline__hideLoading()
+       _hideLoading: function TwitterBase__hideLoading()
        {
            if (this.widgets.loading != null)
            {
@@ -624,12 +829,328 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         *
         * @method _showLoading
         */
-       _showLoading: function TwitterTimeline__showLoading()
+       _showLoading: function TwitterBase__showLoading()
        {
            if (this.widgets.loading != null)
            {
                Dom.setStyle(this.widgets.loading, "display", "inline");
            }
+       },
+       
+       /**
+        * Post a new tweet
+        *
+        * @method _postTweet
+        * @param replyToId {string} ID of tweet this is in reply to, null otherwise
+        * @param text {string} Text to prepopulate the textarea
+        */
+       _postTweet: function TwitterBase__postTweet(replyToId, text)
+       {
+          text = text || "";
+          var me = this,
+             linkRe = new RegExp(/((http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?\^=%&:\/~\+#]*[\w\-\@?\^=%&\/~\+#])?)/gm),
+             shortLinkRe = new RegExp(/^http:\/\/is\.gd\//),
+             id = Alfresco.util.generateDomId(),
+             maxCharCount = 140,
+             html = '<div><textarea id="' + id + '-input" tabindex="0">' + (text || "") + '</textarea>' +
+                '<input type="hidden" id="' + id + '-shortened"></input></div>' + 
+                '<div><div id="' + id + '-count" class="twitter-char-count">' + (maxCharCount - text.length) + '</div>' +
+                '<div id="' + id + '-status" class="twitter-post-status"></div></div>';
+          
+          var callBack = {
+              fn: function TwitterBase_onNewPostClick_postCB(value, obj) {
+                  if (value != null && value != "")
+                  {
+                      var dataObj = {
+                              status: value
+                      };
+                      if (replyToId)
+                          dataObj.in_reply_to_status_id = replyToId;
+                      
+                      // Post the update
+                      this.oAuth.request({
+                          url: "/1/statuses/update.json",
+                          method: "POST",
+                          dataObj: dataObj,
+                          requestContentType: Alfresco.util.Ajax.FORM,
+                          successCallback: {
+                              fn: function(o) {
+                                  if (o.responseText == "")
+                                  {
+                                      throw "Empty response received";
+                                  }
+                                  else
+                                  {
+                                      if (typeof o.json == "object")
+                                      {
+                                          var thtml = this._generateTweetsHTML([o.json]);
+                                          this._refreshDates(); // Refresh existing dates
+                                          this.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
+
+                                          Alfresco.util.PopupManager.displayMessage({
+                                              text: this.msg("message.post-tweet")
+                                          });
+                                      }
+                                      else
+                                      {
+                                          throw "Could not parse JSON response";
+                                      }
+                                  }
+                              },
+                              scope: this
+                          },
+                          failureCallback: {
+                              fn: function() {
+                                  Alfresco.util.PopupManager.displayMessage({
+                                      text: this.msg("error.post-tweet")
+                                  });
+                              },
+                              scope: this
+                          }
+                      });
+                  }
+              },
+              scope: this
+          };
+          
+          /**
+           * Return short version of a link, if we know it, and if it is not a short URL itself
+           */
+          var shortenUrl = function(url) {
+             if (!shortLinkRe.test(url))
+             {
+                for (var i = 0; i < me.shortenedLinks.length; i++)
+                {
+                   if (me.shortenedLinks[i][0] == url && me.shortenedLinks[i][1])
+                   {
+                      return me.shortenedLinks[i][1];
+                   }
+                }
+             }
+             return url;
+          }
+
+          /**
+           * Return text
+           */
+          var getText = function() {
+             var value = null, input = Dom.get(id + "-input");
+             if (input)
+             {
+                value = input.value;
+             }
+             return value;
+          }
+
+          /**
+           * Return text, with all links that we are able to shorten, shortened
+           */
+          var getShortenedText = function() {
+             var value = getText();
+             if (value)
+             {
+                value = YAHOO.lang.trim(value.replace(linkRe, shortenUrl));
+             }
+             return value;
+          }
+          
+          // Create the dialog - returns instance of YAHOO.widget.SimpleDialog
+          this.widgets.postDialog = Alfresco.util.PopupManager.getUserInput({
+              title: this.msg("title.new-tweet"),
+              html: html,
+              buttons: [
+                 {
+                    text: Alfresco.util.message("button.ok", this.name),
+                    handler: function TwitterBase_postTweet_okClick() {
+                       // Grab the input, destroy the pop-up, then callback with the value
+                       var value = getShortenedText();
+                       this.destroy();
+                       if (callBack.fn)
+                       {
+                          callBack.fn.call(callBack.scope || window, value, callBack.obj);
+                       }
+                    },
+                    isDefault: true
+                 },
+                 {
+                    text: Alfresco.util.message("button.cancel", this.name),
+                    handler: function TwitterBase_postTweet_cancelClick() {
+                       this.destroy();
+                    }
+                 }
+              ]
+          });
+          
+          // Cache a reference to the buttons
+          var buttons = this.widgets.postDialog.getButtons(); // Should be two YUI buttons
+
+          var setCharsLeft = function(n) {
+              Dom.get(id + "-count").innerHTML = n;
+              if (n < 0)
+              {
+                 // Add the count-over class
+                 Dom.addClass(id + "-count", "count-over");
+                 // Disable the OK button
+                 buttons[0].set("disabled", true);
+              }
+              else
+              {
+                 // Remove the count-over class
+                  Dom.removeClass(id + "-count", "count-over");
+                 // Enable the OK button
+                  buttons[0].set("disabled", false);
+              }
+          }
+          /**
+           * Return links in the given text that have not been shortned, and are not in the process of being shortened
+           * 
+           * @param text Input text
+           * @returns {array} Unique list of links which have not been shortened
+           */
+          var getUnshortenedLinks = function(text)
+          {
+             var m, link, links = [], found;
+             while ((m = linkRe.exec(text)) != null)
+             {
+                // Make sure link is not right at the end of the text (probably means we are still typing it)
+                if (linkRe.lastIndex == text.length)
+                {
+                   continue;
+                }
+                link = m[0];
+                if (!Alfresco.util.arrayContains(links, link)) // Check not already in array
+                {
+                   found = false;
+                   for (var i = 0; i < me.shortenedLinks.length && !found; i++)
+                   {
+                      if (me.shortenedLinks[i][0] == link)
+                      {
+                         found = true;
+                      }
+                   }
+                   if (!found)
+                   {
+                      links.push(link);
+                   }
+                }
+             }
+             return links;
+          }
+          var onTextChange = function(e, obj) {
+              // TODO Execute this on a timer
+              // First calculate the length based on what we know now, and set this
+              var text = getShortenedText();
+              setCharsLeft(maxCharCount - text.length);
+              
+              // Now, if there are any links that have not been shortened then we must call out for these
+              var unshortened = getUnshortenedLinks(getText()),
+                 numLinks = unshortened.length,
+                 numCompleted = 0,
+                 link;
+              
+              if (unshortened.length > 0)
+              {
+                 // Set the 'Shortening...' text
+                 Dom.get(id + "-status").innerHTML = me.msg("label.status-shortening");
+                 for (var i = 0; i < numLinks; i++)
+                 {
+                    link = unshortened[i];
+                    // Add 'null' link to shortenedLinks to signify we are busy shortening it (prevents other events from trying the same)
+                    me.shortenedLinks.push([link, null]);
+                    
+                    // Make the XHR call
+                    Alfresco.util.Ajax.request(
+                    {
+                       url: Alfresco.constants.PROXY_URI.replace("/alfresco/", "/is-gd/") + "create.php",
+                       dataObj: {
+                          format: "json",
+                          url: link
+                       },
+                       successCallback: {
+                          fn: function shortenLink_onSuccess(p_obj) {
+                             // add short url to shortenedLinks, re-calculate chars left
+                             var json = Alfresco.util.parseJSON(p_obj.serverResponse.responseText), 
+                                 shortLink = json.shorturl;
+                             
+                             for (var i = 0; i < me.shortenedLinks.length; i++)
+                             {
+                                if (me.shortenedLinks[i][0] == link)
+                                {
+                                   me.shortenedLinks[i][1] = shortLink;
+                                }
+                                setCharsLeft(maxCharCount - getShortenedText().length);
+                             }
+                             // increment numCompleted, unset the 'Shortening...' only if numCompleted == numLinks
+                             numCompleted ++;
+                             if (numCompleted == numLinks)
+                             {
+                                Dom.get(id + "-status").innerHTML = me.msg("label.status-shortened");
+                                YAHOO.lang.later(1500, me, function() {
+                                   if (Dom.get(id + "-status").innerHTML == me.msg("label.status-shortened"))
+                                   {
+                                      Dom.get(id + "-status").innerHTML = "";
+                                   }
+                                });
+                             }
+                          },
+                          scope: this
+                       },
+                       failureCallback: {
+                          fn: function shortenLink_onFailure(p_obj) {
+                             // remove null value from shortenedLinks to signal we have finished shortening it
+                             for (var i = 0; i < me.shortenedLinks.length; i++)
+                             {
+                                if (me.shortenedLinks[i][0] == link)
+                                {
+                                   me.shortenedLinks.splice(i, 1);
+                                }
+                             }
+                             // increment numCompleted, unset the 'Shortening...' only if numCompleted == numLinks
+                             numCompleted ++;
+                             if (numCompleted == numLinks)
+                             {
+                                Dom.get(id + "-status").innerHTML = me.msg("label.status-shortened");
+                                YAHOO.lang.later(1500, me, function() {
+                                   if (Dom.get(id + "-status").innerHTML == me.msg("label.status-shortened"))
+                                   {
+                                      Dom.get(id + "-status").innerHTML = "";
+                                   }
+                                });
+                             }
+                          },
+                          scope: this
+                       },
+                       scope: this,
+                       noReloadOnAuthFailure: true
+                    });
+                 }
+              }
+          };
+
+          Event.on(id + "-input", "keyup", onTextChange);
+          Event.on(id + "-input", "click", onTextChange);
+          
+          // Position cursor at end of textarea
+          // as per http://stackoverflow.com/questions/4715762/javascript-move-caret-to-last-character/4716021#4716021
+          var moveCaretToEnd = function (el) {
+              if (typeof el.selectionStart == "number") {
+                  el.selectionStart = el.selectionEnd = el.value.length;
+                  el.focus();
+              } else if (typeof el.createTextRange != "undefined") {
+                  el.focus();
+                  var range = el.createTextRange();
+                  range.collapse(false);
+                  range.select();
+              }
+          }
+          
+          moveCaretToEnd(Dom.get(id + "-input"));
+
+          // Work around Chrome's little problem
+          window.setTimeout(function() {
+              moveCaretToEnd(Dom.get(id + "-input"));
+          }, 1);
+
        },
 
        /**
@@ -679,6 +1200,155 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           
           // Fade out the notification
           this._refreshNotification();
+       },
+       
+       /**
+        * Click handler for Reply link
+        *
+        * @method onTweetReplyClick
+        * @param e {object} HTML event
+        */
+       onTweetReplyClick: function TwitterBase_onTweetReplyClick(e, matchEl, obj)
+       {
+          // Prevent default action
+          Event.stopEvent(e);
+          
+          var tEl = Dom.getAncestorByClassName(matchEl, "tweet"),
+              elId = tEl.id,
+              tId = elId.substring(elId.lastIndexOf("-") + 1), // Tweet id
+              snEl = Dom.getElementsByClassName("screen-name", "span" ,tEl)[0],
+              sn = snEl.textContent || snEl.innerText;
+          
+          this._postTweet(tId, "@" + sn + " ");
+       },
+       
+       /**
+        * Click handler for Retweet link
+        *
+        * @method onTweetRetweetClick
+        * @param e {object} HTML event
+        */
+       onTweetRetweetClick: function TwitterBase_onTweetRetweetClick(e, matchEl, obj)
+       {
+          // Prevent default action
+          Event.stopEvent(e);
+          
+          var elId = Dom.getAncestorByClassName(matchEl, "user-tweet").id,
+              tId = elId.substring(elId.lastIndexOf("-") + 1); // Tweet id
+          
+          var me = this;
+          
+          Alfresco.util.PopupManager.displayPrompt({
+              title: this.msg("title.retweet"),
+              text: this.msg("label.retweet"),
+              buttons: [
+                  {
+                      text: Alfresco.util.message("button.ok", this.name),
+                      handler: function TwitterBase_onRetweetClick_okClick() {
+                          me.oAuth.request({
+                              url: "/1/statuses/retweet/" + tId + ".json",
+                              method: "POST",
+                              successCallback: {
+                                  fn: function(o) {
+                                      if (o.responseText == "")
+                                      {
+                                          throw "Empty response received";
+                                      }
+                                      else
+                                      {
+                                          if (typeof o.json == "object")
+                                          {
+                                              var thtml = me._generateTweetsHTML([o.json]);
+                                              me._refreshDates(); // Refresh existing dates
+                                              me.widgets.timeline.innerHTML = thtml + me.widgets.timeline.innerHTML;
+                                              
+                                              Alfresco.util.PopupManager.displayMessage({
+                                                  text: me.msg("message.retweet")
+                                              });
+                                          }
+                                          else
+                                          {
+                                              throw "Could not parse JSON response";
+                                          }
+                                      }
+                                  },
+                                  scope: this
+                              },
+                              failureCallback: {
+                                  fn: function() {
+                                      Alfresco.util.PopupManager.displayMessage({
+                                          text: me.msg("error.retweet")
+                                      });
+                                  },
+                                  scope: this
+                              }
+                          });
+                          this.destroy();
+                      },
+                      isDefault: true
+                  },
+                  {
+                      text: Alfresco.util.message("button.cancel", this.name),
+                      handler: function TwitterBase_onDisconnectClick_cancelClick() {
+                          this.destroy();
+                      }
+                  }
+              ]
+          });
+       },
+       
+       /**
+        * Click handler for Favorite link
+        *
+        * @method onTweetFavoriteClick
+        * @param e {object} HTML event
+        */
+       onTweetFavoriteClick: function TwitterBase_onTweetFavoriteClick(e, matchEl, obj)
+       {
+          // Prevent default action
+          Event.stopEvent(e);
+          
+          var elId = Dom.getAncestorByClassName(matchEl, "user-tweet").id,
+              tId = elId.substring(elId.lastIndexOf("-") + 1), // Tweet id
+              isFavorite = Dom.hasClass(matchEl, "twitter-favorite-link-on"),
+              action = !isFavorite ? "create" : "destroy",
+              newClass = !isFavorite ? "twitter-favorite-link-on" : "twitter-favorite-link",
+              oldClass = !isFavorite ? "twitter-favorite-link" : "twitter-favorite-link-on",
+              errMsgId = !isFavorite ? "error.favorite" : "error.unfavorite";
+          
+          this.oAuth.request({
+              url: "/1/favorites/" + action + "/" + tId + ".json",
+              method: "POST",
+              successCallback: {
+                  fn: function(o) {
+                      if (o.responseText == "")
+                      {
+                          throw "Empty response received";
+                      }
+                      else
+                      {
+                          if (typeof o.json == "object")
+                          {
+                              Dom.addClass(matchEl, newClass);
+                              Dom.removeClass(matchEl, oldClass);
+                          }
+                          else
+                          {
+                              throw "Could not parse JSON response";
+                          }
+                      }
+                  },
+                  scope: this
+              },
+              failureCallback: {
+                  fn: function() {
+                      Alfresco.util.PopupManager.displayMessage({
+                          text: this.msg(errMsgId)
+                      });
+                  },
+                  scope: this
+              }
+          });
        }
    });
    
@@ -789,11 +1459,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
 
           // New tweet link
           Event.addListener(this.id + "-link-new-tweet", "click", this.onNewTweetClick, this, true);
-
-          // Delegate setting up the favorite/retweet/reply links
-          Event.delegate(this.widgets.timeline, "click", this.onTweetFavoriteClick, "a.twitter-favorite-link, a.twitter-favorite-link-on", this, true);
-          Event.delegate(this.widgets.timeline, "click", this.onTweetRetweetClick, "a.twitter-retweet-link", this, true);
-          Event.delegate(this.widgets.timeline, "click", this.onTweetReplyClick, "a.twitter-reply-link", this, true);
           
           // Dropdown filter
           this.widgets.filter = new YAHOO.widget.Button(this.id + "-filter",
@@ -804,114 +1469,12 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           });
           this.widgets.filter.on("click", this.onFilterClicked, this, true);
           
-         // TODO Check OAuth is supported and warn if not
-         
-         this.oAuth = new Extras.OAuthHelper().setOptions({
-             providerId: "twitter",
-             endpointId: "twitter-auth",
-             requestTokenCallbackUri: window.location.href + "?cmpt_htmlid="  + encodeURIComponent(this.id)
-         });
-         
-         this.oAuth.init({
-             successCallback: { 
-                 fn: function TwitterTimeline_onReady_oAuthInit()
-                 {
-                     if (this.oAuth.isAuthorized()) // An access token exists
-                     {
-                         // Run the success handler directly to load the messages
-                         this.onAuthSuccess();
-                     }
-                     else if (this.oAuth.hasToken()) // Found a request token (TODO persist verifier via a web script and redirect user back)
-                     {
-                         // Get verifier from URL
-                         var verifier = Alfresco.util.getQueryStringParameter("oauth_verifier", window.location.href),
-                             cid = Alfresco.util.getQueryStringParameter("cmpt_htmlid", window.location.href);
-                         if (verifier != null && cid != null && cid == this.id)
-                         {
-                             this.oAuth.requestAccessToken(this.oAuth.authData, verifier, {
-                                 successCallback: {
-                                     fn: this.onAuthSuccess, 
-                                     scope: this
-                                 },
-                                 failureHandler: {
-                                     fn: this.onAuthFailure,
-                                     scope: this
-                                 }
-                             });
-                         }
-                         else // Incomplete verifier info, possible we were not redirected
-                         {
-                             this.oAuth.clearCredentials();
-                             // Display the Connect information and button
-                             Dom.setStyle(this.widgets.connect, "display", "block");
-                             // Enable the button
-                             this.widgets.connectButton.set("disabled", false);
-                             // Hide the toolbar
-                             this._hideToolbar();
-                         }
-                     }
-                     else // Not connected at all
-                     {
-                         // Display the Connect information and button
-                         Dom.setStyle(this.widgets.connect, "display", "block");
-                         // Enable the button
-                         this.widgets.connectButton.set("disabled", false);
-                         // Hide the toolbar
-                         this._hideToolbar();
-                     }
-                 }, 
-                 scope: this
-             },
-             failureHandler: { 
-                 fn: function TwitterTimeline_onReady_oAuthInit() {
-                     // Failed to init the oauth helper, e.g. credentials not loaded
-                     Alfresco.util.PopupManager.displayMessage({
-                         text: this.msg("error.initOAuth")
-                     });
-                 }, 
-                 scope: this
-             }
-         });
-      },
-      
-      /**
-       * Callback method used to prompt the user for a verification code to confirm that the
-       * application has been granted access
-       * 
-       * @method onRequestTokenGranted
-       * @param {object} obj Object literal containing properties
-       *    authParams {object} Parameters received from get token stage
-       *    onComplete {function} the callback function to be called to pass back the value provided by the user
-       */
-      onRequestTokenGranted: function TwitterTimeline_onRequestTokenGranted(obj)
-      {
-          Alfresco.util.assertNotEmpty(obj);
-          Alfresco.util.assertNotEmpty(obj.authParams);
-          Alfresco.util.assertNotEmpty(obj.onComplete);
-          
-          var authToken = obj.authParams.oauth_token,
-              callbackConfirmed = obj.authParams.oauth_callback_confirmed,
-              callbackFn = obj.onComplete,
-              authorizationUrl = "http://api.twitter.com/oauth/authorize?oauth_token=" + authToken;
-          
-          if (callbackConfirmed == "true")
+          // TODO Check OAuth is supported and warn if not
+          if (this.oAuth == null)
           {
-              // Save the request token data
-              this.oAuth.saveCredentials({
-                  successCallback: {
-                      fn: function() {
-                          // Navigate to the authorization page
-                          window.location.href = authorizationUrl;
-                      },
-                      scope: this
-                  }
-              });
-          }
-          else
-          {
-              Alfresco.util.PopupManager.displayMessage({
-                  text: "Callback was not confirmed"
-              });
+             this.widgets.notifications.innerHTML = this.msg("error.oauth-missing");
+             Dom.setStyle(this.widgets.notifications, "display", "block");
+             this._hideToolbar();
           }
       },
       
@@ -923,7 +1486,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       onAuthSuccess: function TwitterTimeline_onAuthSuccess()
       {
-          // TODO Wire this up with Bubbling, so multiple dashlets will work
+          Extras.dashlet.TwitterTimeline.superclass.onAuthSuccess.call(this);
 
           // Remove the Connect information and button, if they are shown
           Dom.setStyle(this.widgets.connect, "display", "none");
@@ -968,8 +1531,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                 break;
              }
           }
-          
-          //this.load();
       },
       
       /**
@@ -979,9 +1540,44 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       onAuthFailure: function TwitterTimeline_onAuthFailure()
       {
-          Alfresco.util.PopupManager.displayMessage({
-              text: this.msg("error.general")
-          });
+          Extras.dashlet.TwitterTimeline.superclass.onAuthFailure.call(this);
+      },
+      
+      /**
+       * Callback method for when a request token is available, but not an access token
+       * 
+       * @method onRequestTokenAvailable
+       */
+      onRequestTokenAvailable: function TwitterTimeline_onRequestTokenAvailable()
+      {
+         Extras.dashlet.TwitterTimeline.superclass.onRequestTokenAvailable.call(this);
+         
+         this._showDisconnectButton();
+         // Display the Connect information and button
+         Dom.setStyle(this.widgets.connect, "display", "block");
+         // Enable the button
+         this.widgets.connectButton.set("disabled", false);
+         // Hide the toolbar
+         this._hideToolbar();
+         
+         YAHOO.Bubbling.on("twitterAccessTokenGranted", function(layer, args) {
+            this.load();
+         }, this);
+      },
+      
+      /**
+       * Callback method for when OAuth token is not available
+       * 
+       * @method onNoTokenAvailable
+       */
+      onNoTokenAvailable: function TwitterTimeline_onNoTokenAvailable()
+      {
+         // Display the Connect information and button
+         Dom.setStyle(this.widgets.connect, "display", "block");
+         // Enable the button
+         this.widgets.connectButton.set("disabled", false);
+         // Hide the toolbar
+         this._hideToolbar();
       },
       
       /**
@@ -1157,12 +1753,12 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          }
          
          // Load the timeline
-         this.oAuth.request(
+         this._requestAjax(
          {
             url: url,
-            dataObj: params,
+            params: params,
             successCallback: p_obj.successCallback,
-            failureCallback:  p_obj.failureCallback
+            failureCallback: p_obj.failureCallback
          });
       },
       
@@ -1235,322 +1831,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                 failureMessage: null
             });
          }
-      },
-      
-      /**
-       * Post a new tweet
-       *
-       * @method _postTweet
-       * @param replyToId {string} ID of tweet this is in reply to, null otherwise
-       * @param text {string} Text to prepopulate the textarea
-       */
-      _postTweet: function TwitterTimeline__postTweet(replyToId, text)
-      {
-         text = text || "";
-         var me = this,
-            linkRe = new RegExp(/((http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?\^=%&:\/~\+#]*[\w\-\@?\^=%&\/~\+#])?)/gm),
-            shortLinkRe = new RegExp(/^http:\/\/is\.gd\//),
-            id = Alfresco.util.generateDomId(),
-            maxCharCount = 140,
-            html = '<div><textarea id="' + id + '-input" tabindex="0">' + (text || "") + '</textarea>' +
-               '<input type="hidden" id="' + id + '-shortened"></input></div>' + 
-               '<div><div id="' + id + '-count" class="twitter-char-count">' + (maxCharCount - text.length) + '</div>' +
-               '<div id="' + id + '-status" class="twitter-post-status"></div></div>';
-         
-         var callBack = {
-             fn: function TwitterTimeline_onNewPostClick_postCB(value, obj) {
-                 if (value != null && value != "")
-                 {
-                     var dataObj = {
-                             status: value
-                     };
-                     if (replyToId)
-                         dataObj.in_reply_to_status_id = replyToId;
-                     
-                     // Post the update
-                     this.oAuth.request({
-                         url: "/1/statuses/update.json",
-                         method: "POST",
-                         dataObj: dataObj,
-                         requestContentType: Alfresco.util.Ajax.FORM,
-                         successCallback: {
-                             fn: function(o) {
-                                 if (o.responseText == "")
-                                 {
-                                     throw "Empty response received";
-                                 }
-                                 else
-                                 {
-                                     if (typeof o.json == "object")
-                                     {
-                                         var thtml = this._generateTweetsHTML([o.json]);
-                                         this._refreshDates(); // Refresh existing dates
-                                         this.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
-
-                                         Alfresco.util.PopupManager.displayMessage({
-                                             text: this.msg("message.post-tweet")
-                                         });
-                                     }
-                                     else
-                                     {
-                                         throw "Could not parse JSON response";
-                                     }
-                                 }
-                             },
-                             scope: this
-                         },
-                         failureCallback: {
-                             fn: function() {
-                                 Alfresco.util.PopupManager.displayMessage({
-                                     text: this.msg("error.post-tweet")
-                                 });
-                             },
-                             scope: this
-                         }
-                     });
-                 }
-             },
-             scope: this
-         };
-         
-         /**
-          * Return short version of a link, if we know it, and if it is not a short URL itself
-          */
-         var shortenUrl = function(url) {
-            if (!shortLinkRe.test(url))
-            {
-               for (var i = 0; i < me.shortenedLinks.length; i++)
-               {
-                  if (me.shortenedLinks[i][0] == url && me.shortenedLinks[i][1])
-                  {
-                     return me.shortenedLinks[i][1];
-                  }
-               }
-            }
-            return url;
-         }
-
-         /**
-          * Return text
-          */
-         var getText = function() {
-            var value = null, input = Dom.get(id + "-input");
-            if (input)
-            {
-               value = input.value;
-            }
-            return value;
-         }
-
-         /**
-          * Return text, with all links that we are able to shorten, shortened
-          */
-         var getShortenedText = function() {
-            var value = getText();
-            if (value)
-            {
-               value = YAHOO.lang.trim(value.replace(linkRe, shortenUrl));
-            }
-            return value;
-         }
-         
-         // Create the dialog - returns instance of YAHOO.widget.SimpleDialog
-         this.widgets.postDialog = Alfresco.util.PopupManager.getUserInput({
-             title: this.msg("title.new-tweet"),
-             html: html,
-             buttons: [
-                {
-                   text: Alfresco.util.message("button.ok", this.name),
-                   handler: function TwitterTimeline_postTweet_okClick() {
-                      // Grab the input, destroy the pop-up, then callback with the value
-                      var value = getShortenedText();
-                      this.destroy();
-                      if (callBack.fn)
-                      {
-                         callBack.fn.call(callBack.scope || window, value, callBack.obj);
-                      }
-                   },
-                   isDefault: true
-                },
-                {
-                   text: Alfresco.util.message("button.cancel", this.name),
-                   handler: function TwitterTimeline_postTweet_cancelClick() {
-                      this.destroy();
-                   }
-                }
-             ]
-         });
-         
-         // Cache a reference to the buttons
-         var buttons = this.widgets.postDialog.getButtons(); // Should be two YUI buttons
-
-         var setCharsLeft = function(n) {
-             Dom.get(id + "-count").innerHTML = n;
-             if (n < 0)
-             {
-                // Add the count-over class
-                Dom.addClass(id + "-count", "count-over");
-                // Disable the OK button
-                buttons[0].set("disabled", true);
-             }
-             else
-             {
-                // Remove the count-over class
-                 Dom.removeClass(id + "-count", "count-over");
-                // Enable the OK button
-                 buttons[0].set("disabled", false);
-             }
-         }
-         /**
-          * Return links in the given text that have not been shortned, and are not in the process of being shortened
-          * 
-          * @param text Input text
-          * @returns {array} Unique list of links which have not been shortened
-          */
-         var getUnshortenedLinks = function(text)
-         {
-            var m, link, links = [], found;
-            while ((m = linkRe.exec(text)) != null)
-            {
-               // Make sure link is not right at the end of the text (probably means we are still typing it)
-               if (linkRe.lastIndex == text.length)
-               {
-                  continue;
-               }
-               link = m[0];
-               if (!Alfresco.util.arrayContains(links, link)) // Check not already in array
-               {
-                  found = false;
-                  for (var i = 0; i < me.shortenedLinks.length && !found; i++)
-                  {
-                     if (me.shortenedLinks[i][0] == link)
-                     {
-                        found = true;
-                     }
-                  }
-                  if (!found)
-                  {
-                     links.push(link);
-                  }
-               }
-            }
-            return links;
-         }
-         var onTextChange = function(e, obj) {
-             // TODO Execute this on a timer
-             // First calculate the length based on what we know now, and set this
-             var text = getShortenedText();
-             setCharsLeft(maxCharCount - text.length);
-             
-             // Now, if there are any links that have not been shortened then we must call out for these
-             var unshortened = getUnshortenedLinks(getText()),
-                numLinks = unshortened.length,
-                numCompleted = 0,
-                link;
-             
-             if (unshortened.length > 0)
-             {
-                // Set the 'Shortening...' text
-                Dom.get(id + "-status").innerHTML = me.msg("label.status-shortening");
-                for (var i = 0; i < numLinks; i++)
-                {
-                   link = unshortened[i];
-                   // Add 'null' link to shortenedLinks to signify we are busy shortening it (prevents other events from trying the same)
-                   me.shortenedLinks.push([link, null]);
-                   
-                   // Make the XHR call
-                   Alfresco.util.Ajax.request(
-                   {
-                      url: Alfresco.constants.PROXY_URI.replace("/alfresco/", "/is-gd/") + "create.php",
-                      dataObj: {
-                         format: "json",
-                         url: link
-                      },
-                      successCallback: {
-                         fn: function shortenLink_onSuccess(p_obj) {
-                            // add short url to shortenedLinks, re-calculate chars left
-                            var json = Alfresco.util.parseJSON(p_obj.serverResponse.responseText), 
-                                shortLink = json.shorturl;
-                            
-                            for (var i = 0; i < me.shortenedLinks.length; i++)
-                            {
-                               if (me.shortenedLinks[i][0] == link)
-                               {
-                                  me.shortenedLinks[i][1] = shortLink;
-                               }
-                               setCharsLeft(maxCharCount - getShortenedText().length);
-                            }
-                            // increment numCompleted, unset the 'Shortening...' only if numCompleted == numLinks
-                            numCompleted ++;
-                            if (numCompleted == numLinks)
-                            {
-                               Dom.get(id + "-status").innerHTML = me.msg("label.status-shortened");
-                               YAHOO.lang.later(1500, me, function() {
-                                  if (Dom.get(id + "-status").innerHTML == me.msg("label.status-shortened"))
-                                  {
-                                     Dom.get(id + "-status").innerHTML = "";
-                                  }
-                               });
-                            }
-                         },
-                         scope: this
-                      },
-                      failureCallback: {
-                         fn: function shortenLink_onFailure(p_obj) {
-                            // remove null value from shortenedLinks to signal we have finished shortening it
-                            for (var i = 0; i < me.shortenedLinks.length; i++)
-                            {
-                               if (me.shortenedLinks[i][0] == link)
-                               {
-                                  me.shortenedLinks.splice(i, 1);
-                               }
-                            }
-                            // increment numCompleted, unset the 'Shortening...' only if numCompleted == numLinks
-                            numCompleted ++;
-                            if (numCompleted == numLinks)
-                            {
-                               Dom.get(id + "-status").innerHTML = me.msg("label.status-shortened");
-                               YAHOO.lang.later(1500, me, function() {
-                                  if (Dom.get(id + "-status").innerHTML == me.msg("label.status-shortened"))
-                                  {
-                                     Dom.get(id + "-status").innerHTML = "";
-                                  }
-                               });
-                            }
-                         },
-                         scope: this
-                      },
-                      scope: this,
-                      noReloadOnAuthFailure: true
-                   });
-                }
-             }
-         };
-
-         Event.on(id + "-input", "keyup", onTextChange);
-         Event.on(id + "-input", "click", onTextChange);
-         
-         // Position cursor at end of textarea
-         // as per http://stackoverflow.com/questions/4715762/javascript-move-caret-to-last-character/4716021#4716021
-         var moveCaretToEnd = function (el) {
-             if (typeof el.selectionStart == "number") {
-                 el.selectionStart = el.selectionEnd = el.value.length;
-                 el.focus();
-             } else if (typeof el.createTextRange != "undefined") {
-                 el.focus();
-                 var range = el.createTextRange();
-                 range.collapse(false);
-                 range.select();
-             }
-         }
-         
-         moveCaretToEnd(Dom.get(id + "-input"));
-
-         // Work around Chrome's little problem
-         window.setTimeout(function() {
-             moveCaretToEnd(Dom.get(id + "-input"));
-         }, 1);
-
       },
 
       /**
@@ -1713,155 +1993,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       },
       
       /**
-       * Click handler for Reply link
-       *
-       * @method onTweetReplyClick
-       * @param e {object} HTML event
-       */
-      onTweetReplyClick: function TwitterTimeline_onTweetReplyClick(e, matchEl, obj)
-      {
-         // Prevent default action
-         Event.stopEvent(e);
-         
-         var tEl = Dom.getAncestorByClassName(matchEl, "tweet"),
-             elId = tEl.id,
-             tId = elId.substring(elId.lastIndexOf("-") + 1), // Tweet id
-             snEl = Dom.getElementsByClassName("screen-name", "span" ,tEl)[0],
-             sn = snEl.textContent || snEl.innerText;
-         
-         this._postTweet(tId, "@" + sn + " ");
-      },
-      
-      /**
-       * Click handler for Retweet link
-       *
-       * @method onTweetRetweetClick
-       * @param e {object} HTML event
-       */
-      onTweetRetweetClick: function TwitterTimeline_onTweetRetweetClick(e, matchEl, obj)
-      {
-         // Prevent default action
-         Event.stopEvent(e);
-         
-         var elId = Dom.getAncestorByClassName(matchEl, "user-tweet").id,
-             tId = elId.substring(elId.lastIndexOf("-") + 1); // Tweet id
-         
-         var me = this;
-         
-         Alfresco.util.PopupManager.displayPrompt({
-             title: this.msg("title.retweet"),
-             text: this.msg("label.retweet"),
-             buttons: [
-                 {
-                     text: Alfresco.util.message("button.ok", this.name),
-                     handler: function TwitterTimeline_onRetweetClick_okClick() {
-                         me.oAuth.request({
-                             url: "/1/statuses/retweet/" + tId + ".json",
-                             method: "POST",
-                             successCallback: {
-                                 fn: function(o) {
-                                     if (o.responseText == "")
-                                     {
-                                         throw "Empty response received";
-                                     }
-                                     else
-                                     {
-                                         if (typeof o.json == "object")
-                                         {
-                                             var thtml = me._generateTweetsHTML([o.json]);
-                                             me._refreshDates(); // Refresh existing dates
-                                             me.widgets.timeline.innerHTML = thtml + me.widgets.timeline.innerHTML;
-                                             
-                                             Alfresco.util.PopupManager.displayMessage({
-                                                 text: me.msg("message.retweet")
-                                             });
-                                         }
-                                         else
-                                         {
-                                             throw "Could not parse JSON response";
-                                         }
-                                     }
-                                 },
-                                 scope: this
-                             },
-                             failureCallback: {
-                                 fn: function() {
-                                     Alfresco.util.PopupManager.displayMessage({
-                                         text: me.msg("error.retweet")
-                                     });
-                                 },
-                                 scope: this
-                             }
-                         });
-                         this.destroy();
-                     },
-                     isDefault: true
-                 },
-                 {
-                     text: Alfresco.util.message("button.cancel", this.name),
-                     handler: function TwitterTimeline_onDisconnectClick_cancelClick() {
-                         this.destroy();
-                     }
-                 }
-             ]
-         });
-      },
-      
-      /**
-       * Click handler for Favorite link
-       *
-       * @method onTweetFavoriteClick
-       * @param e {object} HTML event
-       */
-      onTweetFavoriteClick: function TwitterTimeline_onTweetFavoriteClick(e, matchEl, obj)
-      {
-         // Prevent default action
-         Event.stopEvent(e);
-         
-         var elId = Dom.getAncestorByClassName(matchEl, "user-tweet").id,
-             tId = elId.substring(elId.lastIndexOf("-") + 1), // Tweet id
-             isFavorite = Dom.hasClass(matchEl, "twitter-favorite-link-on"),
-             action = !isFavorite ? "create" : "destroy",
-             newClass = !isFavorite ? "twitter-favorite-link-on" : "twitter-favorite-link",
-             oldClass = !isFavorite ? "twitter-favorite-link" : "twitter-favorite-link-on",
-             errMsgId = !isFavorite ? "error.favorite" : "error.unfavorite";
-         
-         this.oAuth.request({
-             url: "/1/favorites/" + action + "/" + tId + ".json",
-             method: "POST",
-             successCallback: {
-                 fn: function(o) {
-                     if (o.responseText == "")
-                     {
-                         throw "Empty response received";
-                     }
-                     else
-                     {
-                         if (typeof o.json == "object")
-                         {
-                             Dom.addClass(matchEl, newClass);
-                             Dom.removeClass(matchEl, oldClass);
-                         }
-                         else
-                         {
-                             throw "Could not parse JSON response";
-                         }
-                     }
-                 },
-                 scope: this
-             },
-             failureCallback: {
-                 fn: function() {
-                     Alfresco.util.PopupManager.displayMessage({
-                         text: this.msg(errMsgId)
-                     });
-                 },
-                 scope: this
-             }
-         });
-      },
-      
-      /**
        * Filter drop-down changed event handler
        * @method onFilterChanged
        * @param p_oMenuItem {object} Selected menu item
@@ -1966,9 +2097,64 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       onReady: function TwitterUserTimeline_onReady()
       {
-          Extras.dashlet.TwitterTimeline.superclass.onReady.call(this);
-          // Load the timeline
+          Extras.dashlet.TwitterUserTimeline.superclass.onReady.call(this);
+          // Load the timeline, if not delgate to oauth
+          if (this.oAuth == null)
+          {
+             this.load();
+          }
+      },
+      
+      /**
+       * Callback method to use to set up the dashlet when it is known that the authentication
+       * has completed successfully
+       * 
+       * @method onAuthSuccess
+       */
+      onAuthSuccess: function TwitterUserTimeline_onAuthSuccess()
+      {
+          Extras.dashlet.TwitterUserTimeline.superclass.onAuthSuccess.call(this);
           this.load();
+      },
+      
+      /**
+       * Callback method to use to set up the dashlet when it is known that the authentication
+       * has failed
+       * 
+       * @method onAuthFailure
+       */
+      onAuthFailure: function TwitterUserTimeline_onAuthFailure()
+      {
+          Extras.dashlet.TwitterUserTimeline.superclass.onAuthFailure.call(this);
+          this.load();
+      },
+      
+      /**
+       * Callback method for when a request token is available, but not an access token
+       * 
+       * @method onRequestTokenAvailable
+       */
+      onRequestTokenAvailable: function TwitterUserTimeline_onRequestTokenAvailable()
+      {
+         Extras.dashlet.TwitterUserTimeline.superclass.onRequestTokenAvailable.call(this);
+         
+         // Defer loading until the access token has been granted
+         /*YAHOO.Bubbling.on("twitterAccessTokenGranted", function(layer, args) {
+            // Re-initialise oauth
+            this._oAuthInit();
+         }, this);*/
+         this.load();
+      },
+      
+      /**
+       * Callback method for when OAuth token is not available
+       * 
+       * @method onNoTokenAvailable
+       */
+      onNoTokenAvailable: function TwitterUserTimeline_onNoTokenAvailable()
+      {
+         Extras.dashlet.TwitterUserTimeline.superclass.onNoTokenAvailable.call(this);
+         this.load();
       },
       
       /**
@@ -2098,7 +2284,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          }
          else
          {
-            url = Alfresco.constants.PROXY_URI.replace("/alfresco/", "/twitter/") + "1/statuses/user_timeline.json";
+            url = "/1/statuses/user_timeline.json";
             params = {
                     screen_name: uparts[0],
                     count: p_obj.dataObj.pageSize || this.options.pageSize,
@@ -2116,14 +2302,13 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          }
          
          // Load the timeline
-         Alfresco.util.Ajax.request(
+         this._requestAjax(
          {
+            endpoint: "twitter",
             url: url,
-            dataObj: params,
+            params: params,
             successCallback: p_obj.successCallback,
-            failureCallback: p_obj.failureCallback,
-            scope: this,
-            noReloadOnAuthFailure: true
+            failureCallback: p_obj.failureCallback
          });
       },
 
@@ -2264,8 +2449,57 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       onReady: function TwitterSearch_onReady()
       {
-          Extras.dashlet.TwitterTimeline.superclass.onReady.call(this);
-         // Load the results
+          Extras.dashlet.TwitterSearch.superclass.onReady.call(this);
+      },
+      
+      /**
+       * Callback method to use to set up the dashlet when it is known that the authentication
+       * has completed successfully
+       * 
+       * @method onAuthSuccess
+       */
+      onAuthSuccess: function TwitterSearch_onAuthSuccess()
+      {
+          Extras.dashlet.TwitterSearch.superclass.onAuthSuccess.call(this);
+          this.load();
+      },
+      
+      /**
+       * Callback method to use to set up the dashlet when it is known that the authentication
+       * has failed
+       * 
+       * @method onAuthFailure
+       */
+      onAuthFailure: function TwitterSearch_onAuthFailure()
+      {
+          Extras.dashlet.TwitterSearch.superclass.onAuthFailure.call(this);
+          this.load();
+      },
+      
+      /**
+       * Callback method for when a request token is available, but not an access token
+       * 
+       * @method onRequestTokenAvailable
+       */
+      onRequestTokenAvailable: function TwitterSearch_onRequestTokenAvailable()
+      {
+         Extras.dashlet.TwitterSearch.superclass.onRequestTokenAvailable.call(this);
+         
+         // Defer loading until the access token has been granted
+         YAHOO.Bubbling.on("twitterAccessTokenGranted", function(layer, args) {
+            // Re-initialise oauth
+            this._oAuthInit();
+         }, this);
+      },
+      
+      /**
+       * Callback method for when OAuth token is not available
+       * 
+       * @method onNoTokenAvailable
+       */
+      onNoTokenAvailable: function TwitterSearch_onNoTokenAvailable()
+      {
+         Extras.dashlet.TwitterSearch.superclass.onNoTokenAvailable.call(this);
          this.load();
       },
       
@@ -2384,7 +2618,18 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          html += "<span class=\"screen-name\">" + userLink + "</span>\n";
          html += "</div>\n";
          html += "<div class=\"tweet-bd\">" + this._formatTweet(t.text) + "</div>\n";
-         html += "<div class=\"tweet-details\">" + this.msg("text.tweetDetails", postedLink, Alfresco.util.decodeHTML(t.source)) + "</div>\n";
+         html += "<div class=\"tweet-details\">\n";
+         html += "<span>" + this.msg("text.tweetDetails", postedLink, Alfresco.util.decodeHTML(t.source)) + "</span>";
+         if (this.oAuth != null && this.oAuth.isAuthorized())
+         {
+             html += "<span class=\"twitter-actions\">\n";
+             html += "<a href=\"\" class=\"twitter-favorite-link" + (t.favorited ? "-on" : "") + "\"><span>" + this.msg("link.favorite") + "</span></a>\n";
+             html += "<a href=\"\" class=\"twitter-retweet-link\"><span>" + this.msg("link.retweet") + "</span></a>\n";
+             html += "<a href=\"\" class=\"twitter-reply-link\"><span>" + this.msg("link.reply") + "</span></a>\n";
+             html += "</span>\n";
+         }
+         html += "</div>\n";
+         //html += "<div class=\"tweet-details\">" + this.msg("text.tweetDetails", postedLink, Alfresco.util.decodeHTML(t.source)) + "</div>\n";
          html += "</div>\n"; // end tweet
          html += "</div>\n"; // end list-tweet
          return html;
@@ -2410,7 +2655,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       _request: function TwitterSearch__request(p_obj)
       {
-         var url = Alfresco.constants.PROXY_URI.replace("/alfresco/", "/twitter-search/") + "search.json";
+         var url = "/search.json";
          var params = {
                 q: this._getSearchTerm(),
                 result_type: "recent",
@@ -2426,10 +2671,12 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
              params.since_id = p_obj.dataObj.minId;
          }
          
-         // Make the request
+         var endpoint = "twitter-search"
+
+         // Load the timeline via regular XHR (authentication not supported for search GET)
          Alfresco.util.Ajax.request(
          {
-            url: url,
+            url: Alfresco.constants.PROXY_URI.replace("/alfresco/", "/" + endpoint + "/") + url,
             dataObj: params,
             successCallback: p_obj.successCallback,
             failureCallback: p_obj.failureCallback,
