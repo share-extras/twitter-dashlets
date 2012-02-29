@@ -87,7 +87,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           pageSize: 50,
 
           /**
-           * How often the dashlet should poll for new Tweets, in seconds. Setting to zero disabled checking.
+           * How often the dashlet should poll for new Tweets, in seconds. Setting to zero disables checking.
            * 
            * @property checkInterval
            * @type int
@@ -183,15 +183,19 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           Event.delegate(this.widgets.timeline, "click", this.onTweetFavoriteClick, "a.twitter-favorite-link, a.twitter-favorite-link-on", this, true);
           Event.delegate(this.widgets.timeline, "click", this.onTweetRetweetClick, "a.twitter-retweet-link", this, true);
           Event.delegate(this.widgets.timeline, "click", this.onTweetReplyClick, "a.twitter-reply-link", this, true);
+          
+          // Decoupled event listener for oauth disconnect events
+          YAHOO.Bubbling.on("twitterDisconnect", this.onDisconnect, this);
 
           if (typeof Extras.OAuthHelper == "function")
           {
              this.oAuth = new Extras.OAuthHelper().setOptions({
                 providerId: "twitter",
                 endpointId: "twitter-auth",
-                requestTokenCallbackUri: window.location.href + "?cmpt_htmlid="  + encodeURIComponent(this.id)
-            });
-            this._oAuthInit();
+                connectorId: "twitter-oauth",
+                authorizationUrl: "http://api.twitter.com/oauth/authorize"
+             });
+             this._oAuthInit();
           }
        },
        
@@ -213,29 +217,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                           // Run the success handler directly to load the messages
                           this.onAuthSuccess();
                       }
-                      else if (this.oAuth.hasToken()) // Found a request token (TODO persist verifier via a web script and redirect user back)
+                      else if (this.oAuth.hasToken()) // Found a request token
                       {
-                          // Get verifier from URL
-                          var verifier = Alfresco.util.getQueryStringParameter("oauth_verifier", window.location.href),
-                              cid = Alfresco.util.getQueryStringParameter("cmpt_htmlid", window.location.href);
-                          if (verifier != null && cid != null && cid == this.id)
-                          {
-                              this.oAuth.requestAccessToken(this.oAuth.authData, verifier, {
-                                  successCallback: {
-                                      fn: this.onAccessTokenGranted,
-                                      scope: this
-                                  },
-                                  failureHandler: {
-                                      fn: this.onAuthFailure,
-                                      scope: this
-                                  }
-                              });
-                              
-                          }
-                          else // Incomplete verifier info, possible we were not redirected or another dashlet is attempting to request the access token
-                          {
-                              this.onRequestTokenAvailable();
-                          }
+                          this.onRequestTokenAvailable();
                       }
                       else // Not connected at all
                       {
@@ -257,59 +241,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        },
        
        /**
-        * Callback method used to prompt the user for a verification code to confirm that the
-        * application has been granted access
-        * 
-        * @method onRequestTokenGranted
-        * @param {object} obj Object literal containing properties
-        *    authParams {object} Parameters received from get token stage
-        *    onComplete {function} the callback function to be called to pass back the value provided by the user
-        */
-       onRequestTokenGranted: function TwitterBase_onRequestTokenGranted(obj)
-       {
-           Alfresco.util.assertNotEmpty(obj);
-           Alfresco.util.assertNotEmpty(obj.authParams);
-           Alfresco.util.assertNotEmpty(obj.onComplete);
-           
-           var authToken = obj.authParams.oauth_token,
-               callbackConfirmed = obj.authParams.oauth_callback_confirmed,
-               callbackFn = obj.onComplete,
-               authorizationUrl = "http://api.twitter.com/oauth/authorize?oauth_token=" + authToken;
-           
-           if (callbackConfirmed == "true")
-           {
-               // Save the request token data
-               this.oAuth.saveCredentials({
-                   successCallback: {
-                       fn: function() {
-                           // Navigate to the authorization page
-                           window.location.href = authorizationUrl;
-                       },
-                       scope: this
-                   }
-               });
-           }
-           else
-           {
-               Alfresco.util.PopupManager.displayMessage({
-                   text: "Callback was not confirmed"
-               });
-           }
-       },
-       
-       /**
-        * Callback method for successful negotiation of an access token
-        * 
-        * @method onAccessTokenGranted
-        */
-       onAccessTokenGranted: function TwitterBase_onAccessTokenGranted(obj)
-       {
-          //this.onAuthSuccess();
-          // Remove the URL query string parameters as we are now finished with them
-          window.location.replace(window.location.href.substring(0, window.location.href.indexOf("?")));
-       },
-       
-       /**
         * Callback method to use to set up the dashlet when it is known that the authentication
         * has completed successfully
         * 
@@ -317,7 +248,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        onAuthSuccess: function TwitterBase_onAuthSuccess()
        {
-           // Implementation provided by sub-class
+           this.onConnect();
        },
        
        /**
@@ -1349,6 +1280,30 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                   scope: this
               }
           });
+       },
+       
+       /**
+        * Bubbling handler for connected status
+        *
+        * @method onConnect
+        * @param layer {string} Event name
+        * @param params {object} Event parameters
+        */
+       onConnect: function TwitterBase_onConnect(layer, params)
+       {
+          Dom.addClass(this.widgets.timeline, "twitter-dashlet-auth");
+       },
+       
+       /**
+        * Bubbling handler for disconnected status
+        *
+        * @method onDisconnect
+        * @param layer {string} Event name
+        * @param params {object} Event parameters
+        */
+       onDisconnect: function TwitterBase_onDisconnect(layer, params)
+       {
+          Dom.removeClass(this.widgets.timeline, "twitter-dashlet-auth");
        }
    });
    
@@ -1917,10 +1872,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                  failureHandler: { 
                      fn: this.onAuthFailure, 
                      scope: this
-                 },
-                 requestTokenHandler:  { 
-                     fn: this.onRequestTokenGranted, 
-                     scope: this
                  }
              });
          }
@@ -1953,18 +1904,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                          me.oAuth.clearCredentials();
                          me.oAuth.saveCredentials();
                          // Remove existing messages
-                         me.widgets.timeline.innerHTML = "";
-                         me.newTweets = [];
-                         me._refreshNotification.call(me);
-                         // Display the Connect information and button
-                         Dom.setStyle(me.widgets.connect, "display", "block");
-                         // Enable the Connect button
-                         me.widgets.connectButton.set("disabled", false);
-                         // Disable the Disconnect button and More button
-                         me._hideDisconnectButton.call(me);
-                         Dom.setStyle(me.widgets.buttons, "display", "none");
-                         // Disable the toolbar
-                         me._hideToolbar.call(me);
+                         YAHOO.Bubbling.fire("twitterDisconnect", {});
                          this.destroy();
                      },
                      isDefault: true
@@ -2020,6 +1960,33 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          // Clear the notification
          this.newTweets = [];
          this._refreshNotification();
+      },
+
+      /**
+       * Bubbling handler for disconnected status
+       *
+       * @method onDisconnect
+       * @param layer {string} Event name
+       * @param params {object} Event parameters
+       */
+      onDisconnect: function TwitterTimeline_onDisconnect(layer, params)
+      {
+         Extras.dashlet.TwitterTimeline.superclass.onDisconnect.call(this, layer, params);
+         // Cancel any active timer
+         this._stopTimer();
+         // Update the UI
+         this.widgets.timeline.innerHTML = "";
+         this.newTweets = [];
+         this._refreshNotification();
+         // Display the Connect information and button
+         Dom.setStyle(this.widgets.connect, "display", "block");
+         // Enable the Connect button
+         this.widgets.connectButton.set("disabled", false);
+         // Disable the Disconnect button and More button
+         this._hideDisconnectButton();
+         Dom.setStyle(this.widgets.buttons, "display", "none");
+         // Disable the toolbar
+         this._hideToolbar();
       }
       
    });

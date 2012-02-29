@@ -132,7 +132,7 @@
 {
 	display: none;
 }
-.user-tweet:HOVER .twitter-actions
+.twitter-dashlet-auth .user-tweet:HOVER .twitter-actions
 {
 	display: inline;
 }

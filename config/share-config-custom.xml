@@ -11,7 +11,8 @@
 			<class>org.sharextras.webscripts.connector.HttpOAuthConnector</class>
 			<consumer-key>0YJmfeXTKWubRvdtFENg</consumer-key>
 			<consumer-secret>FvoMgnFFo1io6bClwnKM40kYY4JDNXIVZQKbbx4K8</consumer-secret>
-			<signature-method>HMAC-SHA1</signature-method>
+            <signature-method>HMAC-SHA1</signature-method>
+            <access-token-path>/oauth/accessToken</access-token-path>
 		</connector>
 	  
 		<!-- Endpoints -->
