@@ -382,7 +382,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           this._refreshDates(); // Refresh existing dates
           if (tweets.length > 0)
           {
-             this.widgets.timeline.innerHTML += this._generateTweetsHTML(tweets); // Do not include duplicate tweet
+             this.widgets.timeline.innerHTML += this._generateTweetsHTML(tweets);
              this.earliestTweetId = this._getEarliestTweetId(tweets);
           }
           this.widgets.moreButton.set("disabled", false);
@@ -2415,7 +2415,16 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           * @type string
           * @default ""
           */
-         defaultSearchTerm: ""
+         defaultSearchTerm: "",
+         
+         /**
+          * Specifies the type of search results requested. Valid values are mixed, recent or popular
+          * 
+          * @property resultType
+          * @type string
+          * @default "recent"
+          */
+         resultType : "recent"
       }),
 
       /**
@@ -2685,7 +2694,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          var url = "/search.json";
          var params = {
                 q: this._getSearchTerm(),
-                result_type: "recent",
+                result_type: this.options.resultType,
                 rpp: p_obj.dataObj.pageSize || this.options.pageSize
          };
 
