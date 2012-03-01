@@ -2309,7 +2309,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          {
             this.configDialog = new Alfresco.module.SimpleDialog(this.id + "-configDialog").setOptions(
             {
-               width: "50em",
+               width: "30em",
                templateUrl: Alfresco.constants.URL_SERVICECONTEXT + "extras/modules/dashlets/twitter-user-timeline/config", actionUrl: actionUrl,
                onSuccess:
                {
@@ -2756,7 +2756,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          {
             this.configDialog = new Alfresco.module.SimpleDialog(this.id + "-configDialog").setOptions(
             {
-               width: "50em",
+               width: "30em",
                templateUrl: Alfresco.constants.URL_SERVICECONTEXT + "extras/modules/dashlets/twitter-search/config", actionUrl: actionUrl,
                onSuccess:
                {
