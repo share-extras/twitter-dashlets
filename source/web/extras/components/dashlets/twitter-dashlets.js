@@ -87,6 +87,15 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           pageSize: 50,
 
           /**
+           * Number of Tweets to load when polling for new tweets
+           * 
+           * @property maxNewTweets
+           * @type int
+           * @default 100
+           */
+          maxNewTweets: 100,
+
+          /**
            * How often the dashlet should poll for new Tweets, in seconds. Setting to zero disables checking.
            * 
            * @property checkInterval
@@ -426,7 +435,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           {
              dataObj:
              {
-                minId: this.latestTweetId
+                minId: this.latestTweetId,
+                pageSize: this.options.maxNewTweets
              },
              successCallback:
              {
