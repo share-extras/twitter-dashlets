@@ -732,7 +732,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
              // Load the timeline via regular XHR
              Alfresco.util.Ajax.request(
              {
-                url: Alfresco.constants.PROXY_URI.replace("/alfresco/", "/" + p_obj.endpoint + "/") + p_obj.url,
+                url: Alfresco.constants.PROXY_URI.replace("/alfresco/", "/" + p_obj.endpoint) + p_obj.url,
                 dataObj: p_obj.params,
                 successCallback: p_obj.successCallback,
                 failureCallback: p_obj.failureCallback,
@@ -2236,8 +2236,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
 
          if (uparts.length > 1)
          {
-            url = Alfresco.constants.PROXY_URI.replace("/alfresco/", "/twitter/") + "1/" + uparts[0] + "/lists/" + uparts[1] + 
-               "/statuses.json";
+            url = "/1/" + uparts[0] + "/lists/" + uparts[1] + "/statuses.json";
             params = {
                     per_page: p_obj.dataObj.pageSize || this.options.pageSize
             };
@@ -2384,6 +2383,15 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
    YAHOO.extend(Extras.dashlet.TwitterSearch, Extras.dashlet.TwitterBase,
    {
       /**
+       * Page number for incrementing when 'Load More' button is clicked
+       *
+       * @property pageNum
+       * @type int
+       * @default 1
+       */
+      pageNum: 1,
+      
+      /**
        * Object container for initialization options
        *
        * @property options
@@ -2505,6 +2513,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          
          this.widgets.timeline.innerHTML = html;
          this.latestTweetId = this._getLatestTweetId(tweets);
+         this.firstTweetId = this._getLatestTweetId(tweets);
          this.earliestTweetId = this._getEarliestTweetId(tweets);
          
          // Empty the new tweets cache and remove any notification
@@ -2517,6 +2526,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          
          // Start the timer to poll for new tweets, if enabled
          this._resetTimer();
+         
+         // Re-set next page number
+         this.pageNum = 1;
       },
 
       /**
@@ -2539,6 +2551,36 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          this.widgets.moreButton.set("disabled", true);
          Dom.setStyle(this.widgets.buttons, "display", "none");
       },
+
+      /**
+       * Load Tweets further back in time from the Twitter API and add to the dashlet contents
+       * 
+       * @method extend
+       */
+      extend: function TwitterSearch_extend()
+      {
+         this._showLoading();
+         // Load the user timeline
+         this._request(
+         {
+            dataObj:
+            {
+               maxId: this.firstTweetId,
+               pageSize: this.options.pageSize,
+               page: this.pageNum + 1
+            },
+            successCallback:
+            {
+               fn: this.onExtensionLoaded,
+               scope: this
+            },
+            failureCallback:
+            {
+               fn: this.onExtensionLoadFailure,
+               scope: this
+            }
+         });
+      },
       
       /**
        * Extended timeline loaded successfully
@@ -2551,8 +2593,26 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       {
          this._hideLoading();
          this._refreshDates(); // Refresh existing dates
-         this.widgets.timeline.innerHTML += this._generateTweetsHTML(p_response.json.results.slice(1)); // Do not include duplicate tweet
+         this.widgets.timeline.innerHTML += this._generateTweetsHTML(p_response.json.results);
          this.widgets.moreButton.set("disabled", false);
+         this.pageNum ++;
+      },
+      
+      /**
+       * New tweets loaded successfully
+       * 
+       * @method onNewTweetsLoaded
+       * @param p_response {object} Response object from request
+       * @param p_obj {object} Custom object passed to function
+       */
+      onNewTweetsLoaded: function TwitterSearch_onNewTweetsLoaded(p_response, p_obj)
+      {
+         this._hideLoading();
+         this.newTweets = p_response.json.results;
+         this._refreshNotification();
+         
+         // Schedule a new poll
+         this._resetTimer();
       },
       
       /**
@@ -2637,13 +2697,17 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          {
              params.since_id = p_obj.dataObj.minId;
          }
+         if (p_obj.dataObj.page != null)
+         {
+             params.page = p_obj.dataObj.page;
+         }
          
-         var endpoint = "twitter-search"
+         var endpoint = "twitter-search";
 
          // Load the timeline via regular XHR (authentication not supported for search GET)
          Alfresco.util.Ajax.request(
          {
-            url: Alfresco.constants.PROXY_URI.replace("/alfresco/", "/" + endpoint + "/") + url,
+            url: Alfresco.constants.PROXY_URI.replace("/alfresco/", "/" + endpoint) + url,
             dataObj: params,
             successCallback: p_obj.successCallback,
             failureCallback: p_obj.failureCallback,
