@@ -785,9 +785,10 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * @param replyToId {string} ID of tweet this is in reply to, null otherwise
         * @param text {string} Text to prepopulate the textarea
         */
-       _postTweet: function TwitterBase__postTweet(replyToId, text)
+       _postTweet: function TwitterBase__postTweet(replyToId, text, title)
        {
           text = text || "";
+          title = title || this.msg("title.new-tweet");
           var me = this,
              linkRe = new RegExp(/((http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?\^=%&:\/~\+#]*[\w\-\@?\^=%&\/~\+#])?)/gm),
              shortLinkRe = new RegExp(/^http:\/\/is\.gd\//),
@@ -897,7 +898,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           
           // Create the dialog - returns instance of YAHOO.widget.SimpleDialog
           this.widgets.postDialog = Alfresco.util.PopupManager.getUserInput({
-              title: this.msg("title.new-tweet"),
+              title: title,
               html: html,
               buttons: [
                  {
@@ -1157,10 +1158,12 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           var tEl = Dom.getAncestorByClassName(matchEl, "tweet"),
               elId = tEl.id,
               tId = elId.substring(elId.lastIndexOf("-") + 1), // Tweet id
-              snEl = Dom.getElementsByClassName("screen-name", "span" ,tEl)[0],
-              sn = snEl.textContent || snEl.innerText;
+              snEls = Dom.getElementsByClassName("screen-name", "span", tEl),
+              unEls = Dom.getElementsByClassName("user-name", "span", tEl),
+              sn = snEls[0].textContent || snEls[0].innerText,
+              un = unEls.length > 0 ? unEls[0].textContent || unEls[0].innerText : null;
           
-          this._postTweet(tId, "@" + sn + " ");
+          this._postTweet(tId, "@" + sn + " ", this.msg("title.reply", un || ("@" + sn)));
        },
        
        /**
@@ -1174,13 +1177,18 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           // Prevent default action
           Event.stopEvent(e);
           
-          var elId = Dom.getAncestorByClassName(matchEl, "user-tweet").id,
-              tId = elId.substring(elId.lastIndexOf("-") + 1); // Tweet id
+          var tEl = Dom.getAncestorByClassName(matchEl, "tweet"), 
+              elId = tEl.id,
+              tId = elId.substring(elId.lastIndexOf("-") + 1), // Tweet id
+              snEls = Dom.getElementsByClassName("screen-name", "span", tEl),
+              unEls = Dom.getElementsByClassName("user-name", "span", tEl),
+              sn = snEls[0].textContent || snEls[0].innerText,
+              un = unEls.length > 0 ? unEls[0].textContent || unEls[0].innerText : null;
           
           var me = this;
           
           Alfresco.util.PopupManager.displayPrompt({
-              title: this.msg("title.retweet"),
+              title: this.msg("title.retweet", un || ("@" + sn)),
               text: this.msg("label.retweet"),
               buttons: [
                   {
