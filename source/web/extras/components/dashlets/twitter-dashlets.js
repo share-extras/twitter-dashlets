@@ -1746,7 +1746,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       {
          var uri = "", 
          params = {
-                 per_page: p_obj.dataObj.pageSize || this.options.pageSize
+               count: p_obj.dataObj.pageSize || this.options.pageSize
          };
          switch (this.options.activeFilter)
          {
