@@ -5,7 +5,8 @@
       "searchTerm": "${(args.searchTerm!"")?js_string}",
       "defaultSearchTerm": "${(config.script["twitter-search"].defaultSearchTerm!"")?js_string}",
       "pageSize": ${(config.script['twitter-search'].pageSize?string)?number?c},
-      "checkInterval": ${(config.script["twitter-search"].checkInterval?string)?number?c}
+      "checkInterval": ${(config.script["twitter-search"].checkInterval?string)?number?c},
+      "resultType": "${(args.resultType!"recent")?js_string}"
    }).setMessages(
       ${messages}
    );

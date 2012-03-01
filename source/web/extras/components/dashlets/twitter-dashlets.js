@@ -2764,11 +2764,14 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                   {
                      // Refresh the feed
                      var u = YAHOO.lang.trim(Dom.get(this.configDialog.id + "-searchTerm").value),
-                         newSearchTerm = (u != "") ? u : this.options.defaultSearchTerm;
+                         newSearchTerm = (u != "") ? u : this.options.defaultSearchTerm,
+                         rtSelect = Dom.get(this.configDialog.id + "-resultType"),
+                         newResultType = rtSelect.options[rtSelect.selectedIndex].value;
                      
-                     if (newSearchTerm != this.options.searchTerm)
+                     if (newSearchTerm != this.options.searchTerm || newResultType != this.options.resultType)
                      {
                         this.options.searchTerm = newSearchTerm;
+                        this.options.resultType = newResultType;
                         this.load();
                      }
                   },
@@ -2779,6 +2782,15 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                   fn: function VideoWidget_doSetupForm_callback(form)
                   {
                      Dom.get(this.configDialog.id + "-searchTerm").value = this._getSearchTerm();
+                     
+                     var rtSelect = Dom.get(this.configDialog.id + "-resultType");
+                     for (var i = 0; i < rtSelect.options.length; i++)
+                     {
+                        if (rtSelect.options[i].value == this.options.resultType)
+                        {
+                           rtSelect.selectedIndex = i;
+                        }
+                     }
                      
                      // Search term is mandatory
                      this.configDialog.form.addValidation(this.configDialog.id + "-searchTerm", Alfresco.forms.validation.mandatory, null, "keyup");
