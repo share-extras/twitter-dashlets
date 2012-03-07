@@ -1468,7 +1468,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           if (this.oAuth == null)
           {
              Dom.getFirstChild(this.widgets.connect).innerHTML = this.msg("error.oauth-missing");
-             this._showToolbar();
+             this._hideToolbar();
+             Dom.setStyle(this.widgets.connect, "display", "block");
           }
       },
       
@@ -2473,6 +2474,11 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onReady: function TwitterSearch_onReady()
       {
           Extras.dashlet.TwitterSearch.superclass.onReady.call(this);
+          // Load the timeline, if not delgate to oauth
+          if (this.oAuth == null)
+          {
+             this.load();
+          }
       },
       
       /**
