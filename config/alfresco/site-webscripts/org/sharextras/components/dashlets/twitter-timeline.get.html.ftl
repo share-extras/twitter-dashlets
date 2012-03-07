@@ -38,7 +38,7 @@
 //]]></script>
 
 <div class="dashlet twitter-dashlet twitter-timeline">
-   <div class="title" id="${args.htmlid}-title">${msg("header.timeline")}</div>
+   <div class="title"><span id="${args.htmlid}-title">${msg("header.timeline")}</span><span id="${args.htmlid}-notifications" class="notifications"></span></div>
    <div class="twitter-dashlet-toolbar toolbar flat-button" id="${args.htmlid}-toolbar">
       <div class="actions">
          <a id="${args.htmlid}-link-new-tweet" class="theme-color-1" title="${msg('link.new-tweet')}" href="#">${msg('link.new-tweet')}</a>
@@ -55,7 +55,6 @@
       </div>
    </div>
    <div id="${args.htmlid}-body" class="body scrollableList" <#if args.height??>style="height: ${args.height}px;"</#if>>
-      <div id="${args.htmlid}-notifications" class="notifications"></div>
       <div id="${args.htmlid}-connect" class="twitter-timeline-connect" style="display: none;">
      	   <div>${msg('message.notConnected')}</div>
      	   <input type="button" id="${args.htmlid}-btn-connect" value="${msg('button.connect')}" />

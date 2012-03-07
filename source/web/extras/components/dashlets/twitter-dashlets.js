@@ -671,7 +671,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
               {
                  this.widgets.notifications.innerHTML = this.msg("message.newTweets", this.newTweets.length);
               }
-              Dom.setStyle(this.widgets.notifications, "display", "block");
+              Dom.setStyle(this.widgets.notifications, "display", this.widgets.notifications.tagName.toLowerCase() == "span" ? "inline" : "block");
            }
            else
            {
@@ -825,13 +825,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                                   {
                                       if (typeof o.json == "object")
                                       {
-                                          var thtml = this._generateTweetsHTML([o.json]);
-                                          this._refreshDates(); // Refresh existing dates
-                                          this.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
-
-                                          Alfresco.util.PopupManager.displayMessage({
-                                              text: this.msg("message.post-tweet")
-                                          });
+                                          this.onPostTweetSuccess(o);
                                       }
                                       else
                                       {
@@ -1096,6 +1090,23 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        },
 
        /**
+        * Success handler for post tweet/reply actions
+        * 
+        * @method onPostTweetSuccess
+        * @param o {object} Response object
+        */
+       onPostTweetSuccess: function TwitterBase_onPostTweetSuccess(o)
+       {
+          var thtml = this._generateTweetsHTML([o.json]);
+          this._refreshDates(); // Refresh existing dates
+          this.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
+
+          Alfresco.util.PopupManager.displayMessage({
+              text: this.msg("message.post-tweet")
+          });
+       },
+
+       /**
         * YUI WIDGET EVENT HANDLERS
         * Handlers for standard events fired from YUI widgets, e.g. "click"
         */
@@ -1155,7 +1166,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           // Prevent default action
           Event.stopEvent(e);
           
-          var tEl = Dom.getAncestorByClassName(matchEl, "tweet"),
+          var tEl = Dom.getAncestorByClassName(matchEl, "user-tweet"),
               elId = tEl.id,
               tId = elId.substring(elId.lastIndexOf("-") + 1), // Tweet id
               snEls = Dom.getElementsByClassName("screen-name", "span", tEl),
@@ -1177,7 +1188,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           // Prevent default action
           Event.stopEvent(e);
           
-          var tEl = Dom.getAncestorByClassName(matchEl, "tweet"), 
+          var tEl = Dom.getAncestorByClassName(matchEl, "user-tweet"), 
               elId = tEl.id,
               tId = elId.substring(elId.lastIndexOf("-") + 1), // Tweet id
               snEls = Dom.getElementsByClassName("screen-name", "span", tEl),
@@ -1207,13 +1218,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                                       {
                                           if (typeof o.json == "object")
                                           {
-                                              var thtml = me._generateTweetsHTML([o.json]);
-                                              me._refreshDates(); // Refresh existing dates
-                                              me.widgets.timeline.innerHTML = thtml + me.widgets.timeline.innerHTML;
-                                              
-                                              Alfresco.util.PopupManager.displayMessage({
-                                                  text: me.msg("message.retweet")
-                                              });
+                                              me.onRetweetSuccess.call(me, o);
                                           }
                                           else
                                           {
@@ -1243,6 +1248,23 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                       }
                   }
               ]
+          });
+       },
+       
+       /**
+        * Success handler for retweet action
+        * 
+        * @method onRetweetSuccess
+        * @param o {object} Response object
+        */
+       onRetweetSuccess: function TwitterBase_onRetweetSuccess(o)
+       {
+          var thtml = this._generateTweetsHTML([o.json]);
+          this._refreshDates(); // Refresh existing dates
+          this.widgets.timeline.innerHTML = thtml + this.widgets.timeline.innerHTML;
+          
+          Alfresco.util.PopupManager.displayMessage({
+              text: this.msg("message.retweet")
           });
        },
        
@@ -1445,9 +1467,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           // TODO Check OAuth is supported and warn if not
           if (this.oAuth == null)
           {
-             this.widgets.notifications.innerHTML = this.msg("error.oauth-missing");
-             Dom.setStyle(this.widgets.notifications, "display", "block");
-             this._hideToolbar();
+             Dom.getFirstChild(this.widgets.connect).innerHTML = this.msg("error.oauth-missing");
+             this._showToolbar();
           }
       },
       
@@ -2817,6 +2838,32 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
             })
          }
          this.configDialog.show();
+      },
+      
+      /**
+       * Success handler for retweet action
+       * 
+       * @method onRetweetSuccess
+       * @param o {object} Response object
+       */
+      onRetweetSuccess: function TwitterSearch_onRetweetSuccess(o)
+      {
+         Alfresco.util.PopupManager.displayMessage({
+             text: this.msg("message.retweet")
+         });
+      },
+
+      /**
+       * Success handler for post tweet/reply actions
+       * 
+       * @method onPostTweetSuccess
+       * @param o {object} Response object
+       */
+      onPostTweetSuccess: function TwitterBase_onPostTweetSuccess(o)
+      {
+         Alfresco.util.PopupManager.displayMessage({
+             text: this.msg("message.post-tweet")
+         });
       }
       
    });
