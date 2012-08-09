@@ -574,8 +574,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        {
           return text.replace(
                 /https?:\/\/\S+[^\s.]/gm, "<a href=\"$&\" target=\"_blank\">$&</a>").replace(
-                /@(\w+)/gm, "<a href=\"http://twitter.com/$1\" target=\"_blank\">$&</a>").replace(
-                /#(\w+)/gm, "<a href=\"http://twitter.com/search?q=%23$1\" target=\"_blank\">$&</a>");
+                /@([^\s]+)\b/gm, "<a href=\"http://twitter.com/$1\" target=\"_blank\">$&</a>").replace(
+                /#([^\s]+)\b/gm, "<a href=\"http://twitter.com/search?q=%23$1\" target=\"_blank\">#$1</a>");
        },
        
        /**
