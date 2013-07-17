@@ -1651,16 +1651,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       },
       
       /**
-       * Callback method when a problem occurs with the authentication
-       * 
-       * @method onAuthFailure
-       */
-      onAuthFailure: function TwitterTimeline_onAuthFailure()
-      {
-          Extras.dashlet.TwitterTimeline.superclass.onAuthFailure.call(this);
-      },
-      
-      /**
        * Callback method for when a request token is available, but not an access token
        * 
        * @method onRequestTokenAvailable
@@ -2107,38 +2097,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       {
           Extras.dashlet.TwitterUserTimeline.superclass.onAuthSuccess.call(this);
           this.load();
-      },
-      
-      /**
-       * Callback method to use to set up the dashlet when it is known that the authentication
-       * has failed
-       * 
-       * @method onAuthFailure
-       */
-      onAuthFailure: function TwitterUserTimeline_onAuthFailure()
-      {
-          Extras.dashlet.TwitterUserTimeline.superclass.onAuthFailure.call(this);
-          this.load();
-      },
-      
-      /**
-       * Callback method for when a request token is available, but not an access token
-       * 
-       * @method onRequestTokenAvailable
-       */
-      onRequestTokenAvailable: function TwitterUserTimeline_onRequestTokenAvailable()
-      {
-         Extras.dashlet.TwitterUserTimeline.superclass.onRequestTokenAvailable.call(this);
-      },
-      
-      /**
-       * Callback method for when OAuth token is not available
-       * 
-       * @method onNoTokenAvailable
-       */
-      onNoTokenAvailable: function TwitterUserTimeline_onNoTokenAvailable()
-      {
-         Extras.dashlet.TwitterUserTimeline.superclass.onNoTokenAvailable.call(this);
       },
       
       /**
