@@ -188,6 +188,33 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
              }
           );
 
+          
+          // Connect button
+          this.widgets.connect = Dom.get(this.id + "-connect");
+
+          // Toolbar div
+          this.widgets.toolbar = Dom.get(this.id + "-toolbar");
+          
+          // Set up the Connect button
+          if (this.widgets.connect != null)
+          {
+             this.widgets.connectButton = new YAHOO.widget.Button(
+                   this.id + "-btn-connect",
+                   {
+                      disabled: true,
+                      onclick: {
+                         fn: this.onConnectButtonClick,
+                         obj: this.widgets.connectButton,
+                         scope: this
+                      }
+                   }
+                );
+          }
+          
+          // Utility links
+          this.widgets.utils = Dom.get(this.id + "-utils");
+          Event.addListener(this.id + "-link-disconnect", "click", this.onDisconnectClick, this, true);
+
           // Delegate setting up the favorite/retweet/reply links
           Event.delegate(this.widgets.timeline, "click", this.onTweetFavoriteClick, "a.twitter-favorite-link, a.twitter-favorite-link-on", this, true);
           Event.delegate(this.widgets.timeline, "click", this.onTweetRetweetClick, "a.twitter-retweet-link", this, true);
@@ -205,6 +232,12 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                 authorizationUrl: "http://api.twitter.com/oauth/authorize"
              });
              this._oAuthInit();
+          }
+          else
+          {
+             Dom.getFirstChild(this.widgets.connect).innerHTML = this.msg("error.oauth-missing");
+             this._hideToolbar();
+             Dom.setStyle(this.widgets.connect, "display", "block");
           }
        },
        
@@ -257,6 +290,12 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        onAuthSuccess: function TwitterBase_onAuthSuccess()
        {
+           // Remove the Connect information and button, if they are shown
+           Dom.setStyle(this.widgets.connect, "display", "none");
+
+           // Enable the Disconnect button
+           this._showDisconnectButton();
+
            this.onConnect();
        },
        
@@ -279,6 +318,17 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        onRequestTokenAvailable: function TwitterBase_onRequestTokenAvailable()
        {
+           this._showDisconnectButton();
+           // Display the Connect information and button
+           Dom.setStyle(this.widgets.connect, "display", "block");
+           // Enable the button
+           this.widgets.connectButton.set("disabled", false);
+
+           // Defer loading until the access token has been granted
+           YAHOO.Bubbling.on("twitterAccessTokenGranted", function(layer, args) {
+              // Re-initialise oauth
+              this._oAuthInit();
+           }, this);
        },
        
        /**
@@ -288,6 +338,10 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         */
        onNoTokenAvailable: function TwitterBase_onNoTokenAvailable()
        {
+          // Display the Connect information and button
+          Dom.setStyle(this.widgets.connect, "display", "block");
+          // Enable the button
+          this.widgets.connectButton.set("disabled", false);
        },
 
        /**
@@ -811,7 +865,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                       
                       // Post the update
                       this.oAuth.request({
-                          url: "/1/statuses/update.json",
+                          url: "/1.1/statuses/update.json",
                           method: "POST",
                           dataObj: dataObj,
                           requestContentType: Alfresco.util.Ajax.FORM,
@@ -1090,6 +1144,30 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        },
 
        /**
+        * Hide the disconnect button
+        *
+        * @method _hideDisconnectButton
+        */
+       _hideDisconnectButton: function TwitterBase__hideDisconnectButton()
+       {
+          Dom.getElementsByClassName ("disconnect", "div", this.id, function(el) {
+             Dom.setStyle(el, "display", "none");
+          }, this, true);
+       },
+
+       /**
+        * Show the disconnect button
+        *
+        * @method _showDisconnectButton
+        */
+       _showDisconnectButton: function TwitterBase__showDisconnectButton()
+       {
+          Dom.getElementsByClassName ("disconnect", "div", this.id, function(el) {
+             Dom.setStyle(el, "display", "block");
+          }, this, true);
+       },
+
+       /**
         * Success handler for post tweet/reply actions
         * 
         * @method onPostTweetSuccess
@@ -1206,7 +1284,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                       text: Alfresco.util.message("button.ok", this.name),
                       handler: function TwitterBase_onRetweetClick_okClick() {
                           me.oAuth.request({
-                              url: "/1/statuses/retweet/" + tId + ".json",
+                              url: "/1.1/statuses/retweet/" + tId + ".json",
                               method: "POST",
                               successCallback: {
                                   fn: function(o) {
@@ -1288,8 +1366,12 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
               errMsgId = !isFavorite ? "error.favorite" : "error.unfavorite";
           
           this.oAuth.request({
-              url: "/1/favorites/" + action + "/" + tId + ".json",
+              url: "/1.1/favorites/" + action + ".json",
               method: "POST",
+              dataObj: {
+                 id: tId
+              },
+              requestContentType: Alfresco.util.Ajax.FORM,
               successCallback: {
                   fn: function(o) {
                       if (o.responseText == "")
@@ -1321,6 +1403,74 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
               }
           });
        },
+
+       /**
+        * Click handler for Connect button
+        *
+        * @method onConnectButtonClick
+        * @param e {object} HTML event
+        */
+       onConnectButtonClick: function TwitterBase_onConnectButtonClick(e, obj)
+       {
+          // Disable the button while we make the request
+          this.widgets.connectButton.set("disabled", true);
+
+          if (!this.oAuth.isAuthorized()) // Double-check we are still not connected
+          {
+              this.oAuth.requestToken({
+                  successCallback: { 
+                      fn: this.onAuthSuccess, 
+                      scope: this
+                  },
+                  failureHandler: { 
+                      fn: this.onAuthFailure, 
+                      scope: this
+                  }
+              });
+          }
+          else
+          {
+              this.onAuthSuccess();
+          }
+       },
+       
+       /**
+        * Click handler for Disconnect link
+        *
+        * @method onDisconnectClick
+        * @param e {object} HTML event
+        */
+       onDisconnectClick: function TwitterBase_onDisconnectClick(e)
+       {
+          // Prevent default action
+          Event.stopEvent(e);
+          
+          var me = this;
+          
+          Alfresco.util.PopupManager.displayPrompt({
+              title: this.msg("title.disconnect"),
+              text: this.msg("label.disconnect"),
+              buttons: [
+                  {
+                      text: Alfresco.util.message("button.ok", this.name),
+                      handler: function TwitterTimeline_onDisconnectClick_okClick() {
+                          me.oAuth.clearCredentials();
+                          me.oAuth.saveCredentials();
+                          // Remove existing messages
+                          YAHOO.Bubbling.fire("twitterDisconnect", {});
+                          this.destroy();
+                      },
+                      isDefault: true
+                  },
+                  {
+                      text: Alfresco.util.message("button.cancel", this.name),
+                      handler: function TwitterTimeline_onDisconnectClick_cancelClick() {
+                          this.destroy();
+                      }
+                  }
+              ]
+          });
+       },
        
        /**
         * Bubbling handler for connected status
@@ -1344,6 +1494,20 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        onDisconnect: function TwitterBase_onDisconnect(layer, params)
        {
           Dom.removeClass(this.widgets.timeline, "twitter-dashlet-auth");
+
+          // Cancel any active timer
+          this._stopTimer();
+          // Update the UI
+          this.widgets.timeline.innerHTML = "";
+          this.newTweets = [];
+          this._refreshNotification();
+          // Display the Connect information and button
+          Dom.setStyle(this.widgets.connect, "display", "block");
+          // Enable the Connect button
+          this.widgets.connectButton.set("disabled", false);
+          // Disable the Disconnect button and More button
+          this._hideDisconnectButton();
+          Dom.setStyle(this.widgets.buttons, "display", "none");
        }
    });
    
@@ -1423,34 +1587,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       {
           Extras.dashlet.TwitterTimeline.superclass.onReady.call(this);
           var me = this;
-          
-          // Connect button
-          this.widgets.connect = Dom.get(this.id + "-connect");
-
-          // Toolbar div
-          this.widgets.toolbar = Dom.get(this.id + "-toolbar");
-          
-          // Set up the Connect button
-          this.widgets.connectButton = new YAHOO.widget.Button(
-             this.id + "-btn-connect",
-             {
-                disabled: true,
-                onclick: {
-                   fn: this.onConnectButtonClick,
-                   obj: this.widgets.connectButton,
-                   scope: this
-                }
-             }
-          );
-          
-          // titleBarActions
-          Dom.getElementsByClassName ("titleBarActions", "div", this.id, function(el) {
-              this.widgets.titleBarActions = el;
-          }, this, true);
-          
-          // Utility links
-          this.widgets.utils = Dom.get(this.id + "-utils");
-          Event.addListener(this.id + "-link-disconnect", "click", this.onDisconnectClick, this, true);
 
           // New tweet link
           Event.addListener(this.id + "-link-new-tweet", "click", this.onNewTweetClick, this, true);
@@ -1463,14 +1599,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
              lazyloadmenu: false
           });
           this.widgets.filter.on("click", this.onFilterClicked, this, true);
-          
-          // TODO Check OAuth is supported and warn if not
-          if (this.oAuth == null)
-          {
-             Dom.getFirstChild(this.widgets.connect).innerHTML = this.msg("error.oauth-missing");
-             this._hideToolbar();
-             Dom.setStyle(this.widgets.connect, "display", "block");
-          }
       },
       
       /**
@@ -1482,12 +1610,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onAuthSuccess: function TwitterTimeline_onAuthSuccess()
       {
           Extras.dashlet.TwitterTimeline.superclass.onAuthSuccess.call(this);
-
-          // Remove the Connect information and button, if they are shown
-          Dom.setStyle(this.widgets.connect, "display", "none");
-          
-          // Enable the Disconnect button
-          this._showDisconnectButton();
           
           // Display the toolbar
           this._showToolbar();
@@ -1546,18 +1668,8 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onRequestTokenAvailable: function TwitterTimeline_onRequestTokenAvailable()
       {
          Extras.dashlet.TwitterTimeline.superclass.onRequestTokenAvailable.call(this);
-         
-         this._showDisconnectButton();
-         // Display the Connect information and button
-         Dom.setStyle(this.widgets.connect, "display", "block");
-         // Enable the button
-         this.widgets.connectButton.set("disabled", false);
          // Hide the toolbar
          this._hideToolbar();
-         
-         YAHOO.Bubbling.on("twitterAccessTokenGranted", function(layer, args) {
-            this.load();
-         }, this);
       },
       
       /**
@@ -1567,10 +1679,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       onNoTokenAvailable: function TwitterTimeline_onNoTokenAvailable()
       {
-         // Display the Connect information and button
-         Dom.setStyle(this.widgets.connect, "display", "block");
-         // Enable the button
-         this.widgets.connectButton.set("disabled", false);
+         Extras.dashlet.TwitterTimeline.superclass.onNoTokenAvailable.call(this);
          // Hide the toolbar
          this._hideToolbar();
       },
@@ -1773,25 +1882,25 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          switch (this.options.activeFilter)
          {
             case "home":
-               uri = '/1/statuses/home_timeline.json';
+               uri = '/1.1/statuses/home_timeline.json';
                break;
 
             case "mentions":
-               uri = '/1/statuses/mentions.json';
+               uri = '/1.1/statuses/mentions_timeline.json';
                params.include_rts = 1;
                break;
 
             case "favorites":
-               uri = '/1/favorites.json';
+               uri = '/1.1/favorites/list.json';
                break;
 
             case "user":
-               uri = '/1/statuses/user_timeline.json';
+               uri = '/1.1/statuses/user_timeline.json';
                params.include_rts = 1;
                break;
 
             case "direct":
-               uri = '/1/direct_messages.json';
+               uri = '/1.1/direct_messages.json';
                break;
          }
          return {uri: uri, params: params };
@@ -1849,115 +1958,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       },
 
       /**
-       * Hide the disconnect button
-       *
-       * @method _hideDisconnectButton
-       */
-      _hideDisconnectButton: function TwitterTimeline__hideDisconnectButton()
-      {
-          if (this.widgets.titleBarActions != null)
-          {
-              Dom.getElementsByClassName ("disconnect", "div", this.widgets.titleBarActions, function(el) {
-                  Dom.setStyle(el, "display", "none");
-              }, this, true);
-          }
-          else
-          {
-              Dom.setStyle(this.widgets.utils, "display", "none");
-          }
-      },
-
-      /**
-       * Show the disconnect button
-       *
-       * @method _showDisconnectButton
-       */
-      _showDisconnectButton: function TwitterTimeline__showDisconnectButton()
-      {
-          if (this.widgets.titleBarActions != null)
-          {
-              Dom.getElementsByClassName ("disconnect", "div", this.widgets.titleBarActions, function(el) {
-                  Dom.setStyle(el, "display", "block");
-              }, this, true);
-          }
-          else
-          {
-              Dom.setStyle(this.widgets.utils, "display", "block");
-          }
-      },
-
-      /**
        * YUI WIDGET EVENT HANDLERS
        * Handlers for standard events fired from YUI widgets, e.g. "click"
        */
-
-      /**
-       * Click handler for Connect button
-       *
-       * @method onConnectButtonClick
-       * @param e {object} HTML event
-       */
-      onConnectButtonClick: function TwitterTimeline_onConnectButtonClick(e, obj)
-      {
-         // Disable the button while we make the request
-         this.widgets.connectButton.set("disabled", true);
-
-         if (!this.oAuth.isAuthorized()) // Double-check we are still not connected
-         {
-             this.oAuth.requestToken({
-                 successCallback: { 
-                     fn: this.onAuthSuccess, 
-                     scope: this
-                 },
-                 failureHandler: { 
-                     fn: this.onAuthFailure, 
-                     scope: this
-                 }
-             });
-         }
-         else
-         {
-             this.onAuthSuccess();
-         }
-      },
-      
-      /**
-       * Click handler for Disconnect link
-       *
-       * @method onDisconnectClick
-       * @param e {object} HTML event
-       */
-      onDisconnectClick: function TwitterTimeline_onDisconnectClick(e)
-      {
-         // Prevent default action
-         Event.stopEvent(e);
-         
-         var me = this;
-         
-         Alfresco.util.PopupManager.displayPrompt({
-             title: this.msg("title.disconnect"),
-             text: this.msg("label.disconnect"),
-             buttons: [
-                 {
-                     text: Alfresco.util.message("button.ok", this.name),
-                     handler: function TwitterTimeline_onDisconnectClick_okClick() {
-                         me.oAuth.clearCredentials();
-                         me.oAuth.saveCredentials();
-                         // Remove existing messages
-                         YAHOO.Bubbling.fire("twitterDisconnect", {});
-                         this.destroy();
-                     },
-                     isDefault: true
-                 },
-                 {
-                     text: Alfresco.util.message("button.cancel", this.name),
-                     handler: function TwitterTimeline_onDisconnectClick_cancelClick() {
-                         this.destroy();
-                     }
-                 }
-             ]
-         });
-      },
       
       /**
        * Click handler for New Tweet link
@@ -2012,19 +2015,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onDisconnect: function TwitterTimeline_onDisconnect(layer, params)
       {
          Extras.dashlet.TwitterTimeline.superclass.onDisconnect.call(this, layer, params);
-         // Cancel any active timer
-         this._stopTimer();
-         // Update the UI
-         this.widgets.timeline.innerHTML = "";
-         this.newTweets = [];
-         this._refreshNotification();
-         // Display the Connect information and button
-         Dom.setStyle(this.widgets.connect, "display", "block");
-         // Enable the Connect button
-         this.widgets.connectButton.set("disabled", false);
-         // Disable the Disconnect button and More button
-         this._hideDisconnectButton();
-         Dom.setStyle(this.widgets.buttons, "display", "none");
          // Disable the toolbar
          this._hideToolbar();
       }
@@ -2105,11 +2095,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onReady: function TwitterUserTimeline_onReady()
       {
           Extras.dashlet.TwitterUserTimeline.superclass.onReady.call(this);
-          // Load the timeline, if not delgate to oauth
-          if (this.oAuth == null)
-          {
-             this.load();
-          }
       },
       
       /**
@@ -2144,13 +2129,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onRequestTokenAvailable: function TwitterUserTimeline_onRequestTokenAvailable()
       {
          Extras.dashlet.TwitterUserTimeline.superclass.onRequestTokenAvailable.call(this);
-         
-         // Defer loading until the access token has been granted
-         /*YAHOO.Bubbling.on("twitterAccessTokenGranted", function(layer, args) {
-            // Re-initialise oauth
-            this._oAuthInit();
-         }, this);*/
-         this.load();
       },
       
       /**
@@ -2161,7 +2139,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onNoTokenAvailable: function TwitterUserTimeline_onNoTokenAvailable()
       {
          Extras.dashlet.TwitterUserTimeline.superclass.onNoTokenAvailable.call(this);
-         this.load();
       },
       
       /**
@@ -2276,8 +2253,10 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
 
          if (uparts.length > 1)
          {
-            url = "/1/" + uparts[0] + "/lists/" + uparts[1] + "/statuses.json";
+            url = "/1.1/lists/statuses.json";
             params = {
+                    slug: uparts[1],
+                    owner_screen_name: uparts[0],
                     per_page: p_obj.dataObj.pageSize || this.options.pageSize
             };
             /*
@@ -2290,7 +2269,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          }
          else
          {
-            url = "/1/statuses/user_timeline.json";
+            url = "/1.1/statuses/user_timeline.json";
             params = {
                     screen_name: uparts[0],
                     count: p_obj.dataObj.pageSize || this.options.pageSize,
@@ -2423,15 +2402,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
    YAHOO.extend(Extras.dashlet.TwitterSearch, Extras.dashlet.TwitterBase,
    {
       /**
-       * Page number for incrementing when 'Load More' button is clicked
-       *
-       * @property pageNum
-       * @type int
-       * @default 1
-       */
-      pageNum: 1,
-      
-      /**
        * Object container for initialization options
        *
        * @property options
@@ -2474,11 +2444,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onReady: function TwitterSearch_onReady()
       {
           Extras.dashlet.TwitterSearch.superclass.onReady.call(this);
-          // Load the timeline, if not delgate to oauth
-          if (this.oAuth == null)
-          {
-             this.load();
-          }
       },
       
       /**
@@ -2491,45 +2456,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       {
           Extras.dashlet.TwitterSearch.superclass.onAuthSuccess.call(this);
           this.load();
-      },
-      
-      /**
-       * Callback method to use to set up the dashlet when it is known that the authentication
-       * has failed
-       * 
-       * @method onAuthFailure
-       */
-      onAuthFailure: function TwitterSearch_onAuthFailure()
-      {
-          Extras.dashlet.TwitterSearch.superclass.onAuthFailure.call(this);
-          this.load();
-      },
-      
-      /**
-       * Callback method for when a request token is available, but not an access token
-       * 
-       * @method onRequestTokenAvailable
-       */
-      onRequestTokenAvailable: function TwitterSearch_onRequestTokenAvailable()
-      {
-         Extras.dashlet.TwitterSearch.superclass.onRequestTokenAvailable.call(this);
-         
-         // Defer loading until the access token has been granted
-         YAHOO.Bubbling.on("twitterAccessTokenGranted", function(layer, args) {
-            // Re-initialise oauth
-            this._oAuthInit();
-         }, this);
-      },
-      
-      /**
-       * Callback method for when OAuth token is not available
-       * 
-       * @method onNoTokenAvailable
-       */
-      onNoTokenAvailable: function TwitterSearch_onNoTokenAvailable()
-      {
-         Extras.dashlet.TwitterSearch.superclass.onNoTokenAvailable.call(this);
-         this.load();
       },
       
       /**
@@ -2549,7 +2475,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          
          if (p_response.json)
          {
-            tweets = p_response.json.results;
+            tweets = p_response.json.statuses;
             
             if (tweets.length > 0)
             {
@@ -2580,9 +2506,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          
          // Start the timer to poll for new tweets, if enabled
          this._resetTimer();
-         
-         // Re-set next page number
-         this.pageNum = 1;
       },
 
       /**
@@ -2605,36 +2528,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          this.widgets.moreButton.set("disabled", true);
          Dom.setStyle(this.widgets.buttons, "display", "none");
       },
-
-      /**
-       * Load Tweets further back in time from the Twitter API and add to the dashlet contents
-       * 
-       * @method extend
-       */
-      extend: function TwitterSearch_extend()
-      {
-         this._showLoading();
-         // Load the user timeline
-         this._request(
-         {
-            dataObj:
-            {
-               maxId: this.firstTweetId,
-               pageSize: this.options.pageSize,
-               page: this.pageNum + 1
-            },
-            successCallback:
-            {
-               fn: this.onExtensionLoaded,
-               scope: this
-            },
-            failureCallback:
-            {
-               fn: this.onExtensionLoadFailure,
-               scope: this
-            }
-         });
-      },
       
       /**
        * Extended timeline loaded successfully
@@ -2646,10 +2539,14 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onExtensionLoaded: function TwitterSearch_onExtensionLoaded(p_response, p_obj)
       {
          this._hideLoading();
+         var tweets = p_response.json.statuses.slice(1);
          this._refreshDates(); // Refresh existing dates
-         this.widgets.timeline.innerHTML += this._generateTweetsHTML(p_response.json.results);
+         if (tweets.length > 0)
+         {
+            this.widgets.timeline.innerHTML += this._generateTweetsHTML(tweets);
+            this.earliestTweetId = this._getEarliestTweetId(tweets);
+         }
          this.widgets.moreButton.set("disabled", false);
-         this.pageNum ++;
       },
       
       /**
@@ -2662,7 +2559,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       onNewTweetsLoaded: function TwitterSearch_onNewTweetsLoaded(p_response, p_obj)
       {
          this._hideLoading();
-         this.newTweets = p_response.json.results;
+         this.newTweets = p_response.json.statuses;
          this._refreshNotification();
          
          // Schedule a new poll
@@ -2672,49 +2569,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
       /**
        * PRIVATE FUNCTIONS
        */
-      
-      /**
-       * Generate HTML markup for a single Tweet
-       * 
-       * @method _generateTweetHTML
-       * @private
-       * @param t {object} Tweet object to render into HTML
-       * @param rt {object} Retweet object, if the Tweet has been RT'ed
-       * @return {string} HTML markup
-       */
-      _generateTweetHTML: function TwitterSearch__generateTweetHTML(t, rt)
-      {
-         var html = "", 
-            profileUri = "http://twitter.com/" + encodeURIComponent(t.from_user),
-            userLink = "<a href=\"" + profileUri + "\" title=\"" + $html(t.from_user) + "\" class=\"theme-color-1\">" + $html(t.from_user) + "</a>",
-            postedRe = /([A-Za-z]{3}) ([A-Za-z]{3}) ([0-9]{2}) ([0-9]{2}:[0-9]{2}:[0-9]{2}) (\+[0-9]{4}) ([0-9]{4})/,
-            postedMatch = postedRe.exec(t.created_at),
-            postedOn = postedMatch != null ? (postedMatch[1] + ", " + postedMatch[3] + " " + postedMatch[2] + " " + postedMatch[6] + " " + postedMatch[4] + " GMT" + postedMatch[5]) : (t.created_at),
-            postedLink = "<a href=\"" + profileUri + "\/status\/" + encodeURIComponent(t.id_str) + "\"><span class=\"tweet-date\" title=\"" + postedOn + "\">" + this._relativeTime(new Date(postedOn)) + "</span><\/a>";
-
-         html += "<div class=\"user-tweet detail-list-item\" id=\"" + $html(this.id) + "-tweet-" + $html(t.id_str) + "\">\n";
-         html += "<div class=\"user-icon\"><a href=\"" + profileUri + "\" title=\"" + $html(t.from_user) + "\"><img src=\"" + $html(t.profile_image_url) + "\" alt=\"" + $html(t.from_user) + "\" width=\"48\" height=\"48\" /></a></div>\n";
-         html += "<div class=\"tweet\">\n";
-         html += "<div class=\"tweet-hd\">\n";
-         html += "<span class=\"screen-name\">" + userLink + "</span>\n";
-         html += "</div>\n";
-         html += "<div class=\"tweet-bd\">" + this._formatTweet(t.text) + "</div>\n";
-         html += "<div class=\"tweet-details\">\n";
-         html += "<span>" + this.msg("text.tweetDetails", postedLink, Alfresco.util.decodeHTML(t.source)) + "</span>";
-         if (this.oAuth != null && this.oAuth.isAuthorized())
-         {
-             html += "<span class=\"twitter-actions\">\n";
-             html += "<a href=\"\" class=\"twitter-favorite-link" + (t.favorited ? "-on" : "") + "\"><span>" + this.msg("link.favorite") + "</span></a>\n";
-             html += "<a href=\"\" class=\"twitter-retweet-link\"><span>" + this.msg("link.retweet") + "</span></a>\n";
-             html += "<a href=\"\" class=\"twitter-reply-link\"><span>" + this.msg("link.reply") + "</span></a>\n";
-             html += "</span>\n";
-         }
-         html += "</div>\n";
-         //html += "<div class=\"tweet-details\">" + this.msg("text.tweetDetails", postedLink, Alfresco.util.decodeHTML(t.source)) + "</div>\n";
-         html += "</div>\n"; // end tweet
-         html += "</div>\n"; // end list-tweet
-         return html;
-      },
       
       /**
        * Get the current search term
@@ -2736,11 +2590,11 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
        */
       _request: function TwitterSearch__request(p_obj)
       {
-         var url = "/search.json";
+         var url = "/1.1/search/tweets.json";
          var params = {
                 q: this._getSearchTerm(),
                 result_type: this.options.resultType,
-                rpp: p_obj.dataObj.pageSize || this.options.pageSize
+                count: p_obj.dataObj.pageSize || this.options.pageSize
          };
 
          if (p_obj.dataObj.maxId != null)
@@ -2755,18 +2609,14 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          {
              params.page = p_obj.dataObj.page;
          }
-         
-         var endpoint = "twitter-search";
 
-         // Load the timeline via regular XHR (authentication not supported for search GET)
-         Alfresco.util.Ajax.request(
+         // Load the timeline
+         this._requestAjax(
          {
-            url: Alfresco.constants.PROXY_URI.replace("/alfresco/", "/" + endpoint) + url,
-            dataObj: params,
+            url: url,
+            params: params,
             successCallback: p_obj.successCallback,
-            failureCallback: p_obj.failureCallback,
-            scope: this,
-            noReloadOnAuthFailure: true
+            failureCallback: p_obj.failureCallback
          });
       },
 
@@ -2844,33 +2694,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
             })
          }
          this.configDialog.show();
-      },
-      
-      /**
-       * Success handler for retweet action
-       * 
-       * @method onRetweetSuccess
-       * @param o {object} Response object
-       */
-      onRetweetSuccess: function TwitterSearch_onRetweetSuccess(o)
-      {
-         Alfresco.util.PopupManager.displayMessage({
-             text: this.msg("message.retweet")
-         });
-      },
-
-      /**
-       * Success handler for post tweet/reply actions
-       * 
-       * @method onPostTweetSuccess
-       * @param o {object} Response object
-       */
-      onPostTweetSuccess: function TwitterBase_onPostTweetSuccess(o)
-      {
-         Alfresco.util.PopupManager.displayMessage({
-             text: this.msg("message.post-tweet")
-         });
       }
-      
    });
 })();

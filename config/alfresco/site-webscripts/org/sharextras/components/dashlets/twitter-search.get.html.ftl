@@ -12,8 +12,10 @@
    );
    new Alfresco.widget.DashletResizer("${args.htmlid}", "${instance.object.id}");
 
-   var editDashletEvent = new YAHOO.util.CustomEvent("onDashletConfigure");
+   var editDashletEvent = new YAHOO.util.CustomEvent("onDashletConfigure"),
+      disconnectEvent = new YAHOO.util.CustomEvent("onDisconnectClick");
    editDashletEvent.subscribe(dashlet.onConfigClick, dashlet, true);
+   disconnectEvent.subscribe(dashlet.onDisconnectClick, dashlet, true);
 
    new Alfresco.widget.DashletTitleBarActions("${args.htmlid}").setOptions(
    {
@@ -26,6 +28,11 @@
             tooltip: "${msg("dashlet.edit.tooltip")?js_string}"
          },
 </#if>
+         {
+            cssClass: "disconnect",
+            eventOnClick: disconnectEvent,
+            tooltip: "${msg("dashlet.disconnect.tooltip")?js_string}"
+         },
          {
             cssClass: "help",
             bubbleOnClick:
@@ -41,6 +48,10 @@
 <div class="dashlet twitter-dashlet twitter-search">
    <div class="title"><span id="${args.htmlid}-title">${msg("header.default")}</span><span id="${args.htmlid}-notifications" class="notifications"></span></div>
    <div id="${args.htmlid}-body" class="body scrollableList" <#if args.height??>style="height: ${args.height}px;"</#if>>
+      <div id="${args.htmlid}-connect" class="twitter-connect" style="display: none;">
+         <div>${msg('message.notConnected')}</div>
+         <input type="button" id="${args.htmlid}-btn-connect" value="${msg('button.connect')}" />
+      </div>
       <div id="${args.htmlid}-timeline" class="timeline"></div>
       <div id="${args.htmlid}-buttons" class="buttons"><input type="button" id="${args.htmlid}-btn-more" value="${msg('button.more')}" /></div>
    </div>

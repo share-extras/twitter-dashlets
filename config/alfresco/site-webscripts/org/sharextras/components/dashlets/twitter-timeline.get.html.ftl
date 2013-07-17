@@ -55,7 +55,7 @@
       </div>
    </div>
    <div id="${args.htmlid}-body" class="body scrollableList" <#if args.height??>style="height: ${args.height}px;"</#if>>
-      <div id="${args.htmlid}-connect" class="twitter-timeline-connect" style="display: none;">
+      <div id="${args.htmlid}-connect" class="twitter-connect" style="display: none;">
      	   <div>${msg('message.notConnected')}</div>
      	   <input type="button" id="${args.htmlid}-btn-connect" value="${msg('button.connect')}" />
  	   </div>
