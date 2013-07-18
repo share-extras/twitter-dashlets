@@ -102,7 +102,34 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
            * @type int
            * @default 300
            */
-          checkInterval: 300
+          checkInterval: 300,
+          
+          /**
+           * Character count limit for a new tweet
+           * 
+           * @property tweetCharLimit
+           * @type int
+           * @default 140
+           */
+          tweetCharLimit: 140,
+          
+          /**
+           * Maximum size of a non-HTTPS URL returned by the t.co shortening service
+           * 
+           * @property maxUrlSize
+           * @type int
+           * @default -1
+           */
+          maxUrlSize: 20,
+          
+          /**
+           * Maximum size of a HTTPS URL returned by the t.co shortening service
+           * 
+           * @property maxUrlSize
+           * @type int
+           * @default -1
+           */
+          maxUrlSizeHttps: 21
        },
 
        /**
@@ -845,9 +872,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           title = title || this.msg("title.new-tweet");
           var me = this,
              linkRe = new RegExp(/((http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?\^=%&:\/~\+#]*[\w\-\@?\^=%&\/~\+#])?)/gm),
-             shortLinkRe = new RegExp(/^http:\/\/is\.gd\//),
              id = Alfresco.util.generateDomId(),
-             maxCharCount = 140,
+             maxCharCount = this.options.tweetCharLimit, maxUrlSize = this.options.maxUrlSize,
+             maxUrlSizeHttps = this.options.maxUrlSizeHttps,
              html = '<div><textarea id="' + id + '-input" tabindex="0">' + (text || "") + '</textarea>' +
                 '<input type="hidden" id="' + id + '-shortened"></input></div>' + 
                 '<div><div id="' + id + '-count" class="twitter-char-count">' + (maxCharCount - text.length) + '</div>' +
@@ -902,23 +929,6 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
               },
               scope: this
           };
-          
-          /**
-           * Return short version of a link, if we know it, and if it is not a short URL itself
-           */
-          var shortenUrl = function(url) {
-             if (!shortLinkRe.test(url))
-             {
-                for (var i = 0; i < me.shortenedLinks.length; i++)
-                {
-                   if (me.shortenedLinks[i][0] == url && me.shortenedLinks[i][1])
-                   {
-                      return me.shortenedLinks[i][1];
-                   }
-                }
-             }
-             return url;
-          }
 
           /**
            * Return text
@@ -932,18 +942,49 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
              return value;
           }
 
-          /**
-           * Return text, with all links that we are able to shorten, shortened
-           */
-          var getShortenedText = function() {
-             var value = getText();
-             if (value)
+          var countLinks = function(t) {
+             if (t)
              {
-                value = YAHOO.lang.trim(value.replace(linkRe, shortenUrl));
+                var m = t.match(linkRe);
+                return m != null ? m.length : 0;
              }
-             return value;
-          }
-          
+             return 0;
+          };
+
+          var countContentChars = function(t) {
+             if (t)
+             {
+                Alfresco.logger.debug("Non-link char count is " + YAHOO.lang.trim(t).replace(linkRe, "").length);
+                return YAHOO.lang.trim(t).replace(linkRe, "").length;
+             }
+             return 0;
+          };
+
+          var countLinkChars = function(t) {
+             if (t)
+             {
+                var count = 0, match;
+                while ((match = linkRe.exec(t)) !== null)
+                {
+                   count += (match[2] == "https" ? maxUrlSizeHttps : maxUrlSize);
+                   if (Alfresco.logger.isDebugEnabled())
+                   {
+                      Alfresco.logger.debug("Link char count now " + count + " for URL " + match[0] + ", protocol " + match[2]);
+                   }
+                }
+                if (Alfresco.logger.isDebugEnabled())
+                {
+                   Alfresco.logger.debug("Link char count is " + count);
+                }
+                return count;
+             }
+             return 0;
+          };
+  
+          var countChars = function(t) {
+             return countContentChars(t) + countLinkChars(t);
+          };
+
           // Create the dialog - returns instance of YAHOO.widget.SimpleDialog
           this.widgets.postDialog = Alfresco.util.PopupManager.getUserInput({
               title: title,
@@ -953,7 +994,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                     text: Alfresco.util.message("button.ok", this.name),
                     handler: function TwitterBase_postTweet_okClick() {
                        // Grab the input, destroy the pop-up, then callback with the value
-                       var value = getShortenedText();
+                       var value = getText();
                        this.destroy();
                        if (callBack.fn)
                        {
@@ -991,129 +1032,23 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
                   buttons[0].set("disabled", false);
               }
           }
-          /**
-           * Return links in the given text that have not been shortned, and are not in the process of being shortened
-           * 
-           * @param text Input text
-           * @returns {array} Unique list of links which have not been shortened
-           */
-          var getUnshortenedLinks = function(text)
-          {
-             var m, link, links = [], found;
-             while ((m = linkRe.exec(text)) != null)
-             {
-                // Make sure link is not right at the end of the text (probably means we are still typing it)
-                if (linkRe.lastIndex == text.length)
-                {
-                   continue;
-                }
-                link = m[0];
-                if (!Alfresco.util.arrayContains(links, link)) // Check not already in array
-                {
-                   found = false;
-                   for (var i = 0; i < me.shortenedLinks.length && !found; i++)
-                   {
-                      if (me.shortenedLinks[i][0] == link)
-                      {
-                         found = true;
-                      }
-                   }
-                   if (!found)
-                   {
-                      links.push(link);
-                   }
-                }
-             }
-             return links;
-          }
+ 
           var onTextChange = function(e, obj) {
-              // TODO Execute this on a timer
-              // First calculate the length based on what we know now, and set this
-              var text = getShortenedText();
-              setCharsLeft(maxCharCount - text.length);
-              
-              // Now, if there are any links that have not been shortened then we must call out for these
-              var unshortened = getUnshortenedLinks(getText()),
-                 numLinks = unshortened.length,
-                 numCompleted = 0,
-                 link;
-              
-              if (unshortened.length > 0)
+              // Set the number of characters remaining
+              setCharsLeft(maxCharCount - countChars(getText()));
+              // Set the 'Shortening...' text
+              var numLinks = countLinks(getText());
+              if (Alfresco.logger.isDebugEnabled())
               {
-                 // Set the 'Shortening...' text
-                 Dom.get(id + "-status").innerHTML = me.msg("label.status-shortening");
-                 for (var i = 0; i < numLinks; i++)
-                 {
-                    link = unshortened[i];
-                    // Add 'null' link to shortenedLinks to signify we are busy shortening it (prevents other events from trying the same)
-                    me.shortenedLinks.push([link, null]);
-                    
-                    // Make the XHR call
-                    Alfresco.util.Ajax.request(
-                    {
-                       url: Alfresco.constants.PROXY_URI.replace("/alfresco/", "/is-gd/") + "create.php",
-                       dataObj: {
-                          format: "json",
-                          url: link
-                       },
-                       successCallback: {
-                          fn: function shortenLink_onSuccess(p_obj) {
-                             // add short url to shortenedLinks, re-calculate chars left
-                             var json = Alfresco.util.parseJSON(p_obj.serverResponse.responseText), 
-                                 shortLink = json.shorturl;
-                             
-                             for (var i = 0; i < me.shortenedLinks.length; i++)
-                             {
-                                if (me.shortenedLinks[i][0] == link)
-                                {
-                                   me.shortenedLinks[i][1] = shortLink;
-                                }
-                                setCharsLeft(maxCharCount - getShortenedText().length);
-                             }
-                             // increment numCompleted, unset the 'Shortening...' only if numCompleted == numLinks
-                             numCompleted ++;
-                             if (numCompleted == numLinks)
-                             {
-                                Dom.get(id + "-status").innerHTML = me.msg("label.status-shortened");
-                                YAHOO.lang.later(1500, me, function() {
-                                   if (Dom.get(id + "-status").innerHTML == me.msg("label.status-shortened"))
-                                   {
-                                      Dom.get(id + "-status").innerHTML = "";
-                                   }
-                                });
-                             }
-                          },
-                          scope: this
-                       },
-                       failureCallback: {
-                          fn: function shortenLink_onFailure(p_obj) {
-                             // remove null value from shortenedLinks to signal we have finished shortening it
-                             for (var i = 0; i < me.shortenedLinks.length; i++)
-                             {
-                                if (me.shortenedLinks[i][0] == link)
-                                {
-                                   me.shortenedLinks.splice(i, 1);
-                                }
-                             }
-                             // increment numCompleted, unset the 'Shortening...' only if numCompleted == numLinks
-                             numCompleted ++;
-                             if (numCompleted == numLinks)
-                             {
-                                Dom.get(id + "-status").innerHTML = me.msg("label.status-shortened");
-                                YAHOO.lang.later(1500, me, function() {
-                                   if (Dom.get(id + "-status").innerHTML == me.msg("label.status-shortened"))
-                                   {
-                                      Dom.get(id + "-status").innerHTML = "";
-                                   }
-                                });
-                             }
-                          },
-                          scope: this
-                       },
-                       scope: this,
-                       noReloadOnAuthFailure: true
-                    });
-                 }
+                 Alfresco.logger.debug("Link count is " + numLinks);
+              }
+              if (numLinks > 0)
+              {
+                 Dom.get(id + "-status").innerHTML = me.msg(numLinks == 1 ? "label.status-shorten-single" : "label.status-shorten-multiple", numLinks);
+              }
+              else
+              {
+                 Dom.get(id + "-status").innerHTML = "";
               }
           };
 
