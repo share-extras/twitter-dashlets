@@ -626,7 +626,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           html += "<span class=\"screen-name\">" + userLink + "</span> <span class=\"user-name\">" + $html(t.user.name) + "</span>\n";
           html += !YAHOO.lang.isUndefined(rt) ? " <span class=\"retweeted\">" + this.msg("label.retweetedBy", rt.user.screen_name) + "</span>\n" : "";
           html += "</div>\n";
-          html += "<div class=\"tweet-bd\">" + this._formatTweet(t.text) + "</div>\n";
+          html += "<div class=\"tweet-bd\">" + this._formatTweet(t) + "</div>\n";
           html += "<div class=\"tweet-details\">\n";
           html += "<span>" + this.msg("text.tweetDetails", postedLink, t.source) + "</span>";
           if (this.oAuth != null && this.oAuth.isAuthorized())
@@ -648,13 +648,30 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
         * 
         * @method _formatTweet
         * @private
-        * @param {string} text The plain tweet text
+        * @param {string} t The tweet object from the JSON API
         * @return {string} The tweet text, with hyperlinks added
         */
-       _formatTweet: function TwitterBase__formatTweet(text)
+       _formatTweet: function TwitterBase__formatTweet(t)
        {
+          var text = t.text;
+          function replaceLinks(url)
+          {
+             var title = "", entity;
+             if (t.entities && t.entities.urls)
+             {
+                for (var i = 0; i < t.entities.urls.length; i++)
+                {
+                   entity = t.entities.urls[i];
+                   if (url == entity.url)
+                   {
+                      return "<a href=\"" + url + "\" title=\"" + entity.expanded_url + "\" target=\"_blank\">" + entity.display_url + "</a>";
+                   }
+                }
+             }
+             return "<a href=\"" + url + "\" target=\"_blank\">" + url + "</a>";
+          }
           return text.replace(
-                /https?:\/\/\S+[^\s.]/gm, "<a href=\"$&\" target=\"_blank\">$&</a>").replace(
+                /https?:\/\/\S+[^\s.]/gm, replaceLinks).replace(
                 /@([^\s]+)\b/gm, "<a href=\"http://twitter.com/$1\" target=\"_blank\">$&</a>").replace(
                 /#([^\s]+)\b/gm, "<a href=\"http://twitter.com/search?q=%23$1\" target=\"_blank\">#$1</a>");
        },
@@ -1747,7 +1764,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
          html += "<span class=\"screen-name\">" + userLink + "</span> <span class=\"user-name\">" + $html(t.sender.name) + "</span>\n";
          html += !YAHOO.lang.isUndefined(rt) ? " <span class=\"retweeted\">" + this.msg("label.retweetedBy", rt.sender.screen_name) + "</span>\n" : "";
          html += "</div>\n";
-         html += "<div class=\"tweet-bd\">" + this._formatTweet(t.text) + "</div>\n";
+         html += "<div class=\"tweet-bd\">" + this._formatTweet(t) + "</div>\n";
          html += "<div class=\"tweet-details\">\n";
          html += "<span>" + postedLink + "</span>";
          if (this.oAuth != null)
