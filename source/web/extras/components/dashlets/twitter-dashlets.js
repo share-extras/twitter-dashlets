@@ -120,7 +120,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
            * @type int
            * @default -1
            */
-          maxUrlSize: 20,
+          maxUrlSize: -1,
           
           /**
            * Maximum size of a HTTPS URL returned by the t.co shortening service
@@ -129,7 +129,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
            * @type int
            * @default -1
            */
-          maxUrlSizeHttps: 21
+          maxUrlSizeHttps: -1
        },
 
        /**
@@ -873,8 +873,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           var me = this,
              linkRe = new RegExp(/((http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?\^=%&:\/~\+#]*[\w\-\@?\^=%&\/~\+#])?)/gm),
              id = Alfresco.util.generateDomId(),
-             maxCharCount = this.options.tweetCharLimit, maxUrlSize = this.options.maxUrlSize,
-             maxUrlSizeHttps = this.options.maxUrlSizeHttps,
+             maxCharCount = this.options.tweetCharLimit,
              html = '<div><textarea id="' + id + '-input" tabindex="0">' + (text || "") + '</textarea>' +
                 '<input type="hidden" id="' + id + '-shortened"></input></div>' + 
                 '<div><div id="' + id + '-count" class="twitter-char-count">' + (maxCharCount - text.length) + '</div>' +
@@ -963,10 +962,10 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           var countLinkChars = function(t) {
              if (t)
              {
-                var count = 0, match;
+                var count = 0, match, maxUrlSize = this.options.maxUrlSize, maxUrlSizeHttps = this.options.maxUrlSizeHttps;
                 while ((match = linkRe.exec(t)) !== null)
                 {
-                   count += (match[2] == "https" ? maxUrlSizeHttps : maxUrlSize);
+                   count += (maxUrlSize != -1 ? (match[2] == "https" ? maxUrlSizeHttps : maxUrlSize) : match[0].length);
                    if (Alfresco.logger.isDebugEnabled())
                    {
                       Alfresco.logger.debug("Link char count now " + count + " for URL " + match[0] + ", protocol " + match[2]);
@@ -982,7 +981,7 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           };
   
           var countChars = function(t) {
-             return countContentChars(t) + countLinkChars(t);
+             return countContentChars.call(this, t) + countLinkChars.call(this, t);
           };
 
           // Create the dialog - returns instance of YAHOO.widget.SimpleDialog
@@ -1034,17 +1033,18 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           }
  
           var onTextChange = function(e, obj) {
+             var text = getText.call(this);
               // Set the number of characters remaining
-              setCharsLeft(maxCharCount - countChars(getText()));
+              setCharsLeft.call(this, maxCharCount - countChars.call(this, text));
               // Set the 'Shortening...' text
-              var numLinks = countLinks(getText());
+              var numLinks = countLinks.call(this, text);
               if (Alfresco.logger.isDebugEnabled())
               {
                  Alfresco.logger.debug("Link count is " + numLinks);
               }
               if (numLinks > 0)
               {
-                 Dom.get(id + "-status").innerHTML = me.msg(numLinks == 1 ? "label.status-shorten-single" : "label.status-shorten-multiple", numLinks);
+                 Dom.get(id + "-status").innerHTML = this.msg(numLinks == 1 ? "label.status-shorten-single" : "label.status-shorten-multiple", numLinks);
               }
               else
               {
@@ -1052,9 +1052,36 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
               }
           };
 
-          Event.on(id + "-input", "keyup", onTextChange);
-          Event.on(id + "-input", "click", onTextChange);
-          
+          Event.on(id + "-input", "keyup", onTextChange, this, true);
+          Event.on(id + "-input", "click", onTextChange, this, true);
+
+          // Load the number of characters required for t.co URLs
+          // Only do this once, if not aleady cached
+          if (this.options.maxUrlSize == -1)
+          {
+             this._requestAjax(
+             {
+                url: "/1.1/help/configuration.json",
+                successCallback: {
+                   fn: function(o) {
+                      if (o.json)
+                      {
+                         this.options.maxUrlSize = o.json.short_url_length;
+                         this.options.maxUrlSizeHttps = o.json.short_url_length_https;
+                         onTextChange.call(this);
+                      }
+                   },
+                   scope: this
+                },
+                failureCallback: {
+                   fn: function(o) {
+                      Alfresco.logger.error("Failed to load Twitter configuration");
+                   },
+                   scope: this
+                }
+             });
+          }
+
           // Position cursor at end of textarea
           // as per http://stackoverflow.com/questions/4715762/javascript-move-caret-to-last-character/4716021#4716021
           var moveCaretToEnd = function (el) {
