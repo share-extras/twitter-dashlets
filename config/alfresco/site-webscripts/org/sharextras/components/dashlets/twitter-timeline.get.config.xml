@@ -1,4 +1,4 @@
 <twitter-timeline>
-   <pageSize>20</pageSize>
-   <checkInterval>60</checkInterval>
+   <pageSize>50</pageSize>
+   <checkInterval>300</checkInterval>
 </twitter-timeline>
