@@ -2,6 +2,9 @@
    var timeline = new Extras.dashlet.TwitterTimeline("${args.htmlid}").setOptions(
    {
       "componentId": "${instance.object.id}",
+      "endpointId": "${endpointId}",
+      "connectorId": "${connectorId}",
+      "authorizationUrl": "${authorizationUrl}",
       "activeFilter": "${args.activeFilter!'home'}",
       "pageSize": ${(config.script['twitter-timeline'].pageSize?string)?number?c},
       "checkInterval": ${(config.script["twitter-timeline"].checkInterval?string)?number?c}

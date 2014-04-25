@@ -76,6 +76,33 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
            * @default ""
            */
           componentId: "",
+          
+          /**
+           * Endpoint ID used to access Twitter
+           * 
+           * @property endpointId
+           * @type string
+           * @default ""
+           */
+          endpointId: "",
+          
+          /**
+           * Connector ID used to access Twitter
+           * 
+           * @property connectorId
+           * @type string
+           * @default ""
+           */
+          connectorId: "",
+
+          /**
+           * URL where the user is redirected to in order to authorize the application
+           * 
+           * @property authorizationUrl
+           * @type string
+           * @default ""
+           */
+          authorizationUrl: "",
 
           /**
            * Number of Tweets to load per batch
@@ -254,9 +281,9 @@ if (typeof Extras.dashlet == "undefined" || !Extras.dashlet)
           {
              this.oAuth = new Extras.OAuthHelper().setOptions({
                 providerId: "twitter",
-                endpointId: "twitter-auth",
-                connectorId: "twitter-oauth",
-                authorizationUrl: "http://api.twitter.com/oauth/authorize"
+                endpointId: this.options.endpointId,
+                connectorId: this.options.connectorId,
+                authorizationUrl: this.options.authorizationUrl
              });
              this._oAuthInit();
           }

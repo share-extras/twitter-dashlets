@@ -2,6 +2,9 @@
    var dashlet = new Extras.dashlet.TwitterUserTimeline("${args.htmlid}").setOptions(
    {
       "componentId": "${instance.object.id}",
+      "endpointId": "${endpointId}",
+      "connectorId": "${connectorId}",
+      "authorizationUrl": "${authorizationUrl}",
       "twitterUser": "${(args.twitterUser!"")?js_string}",
       "defaultTwitterUser": "${(config.script["twitter-user-timeline"].defaultUser!"")?js_string}",
       "pageSize": ${(config.script["twitter-user-timeline"].pageSize?string)?number?c},

@@ -2,6 +2,9 @@
    var dashlet = new Extras.dashlet.TwitterSearch("${args.htmlid}").setOptions(
    {
       "componentId": "${instance.object.id}",
+      "endpointId": "${endpointId}",
+      "connectorId": "${connectorId}",
+      "authorizationUrl": "${authorizationUrl}",
       "searchTerm": "${(args.searchTerm!"")?js_string}",
       "defaultSearchTerm": "${(config.script["twitter-search"].defaultSearchTerm!"")?js_string}",
       "pageSize": ${(config.script['twitter-search'].pageSize?string)?number?c},
