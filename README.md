@@ -5,9 +5,9 @@ Author: Will Abson
 
 This project defines three custom dashlets which you can use to interact with Twitter from within Alfresco Share.
 
-**The dashlets require Alfresco 4.0 or greater, and for authenticated Twitter access require the [Share OAuth add-on](https://github.com/share-extras/share-oauth), version 2.2 or greater, is also needed. Older 3.x versions of Alfresco may use the legacy [Twitter Feed](http://code.google.com/p/share-extras/wiki/TwitterFeedDashlet) or [Twitter Search](http://code.google.com/p/share-extras/wiki/TwitterSearchDashlet) add-ons.**
+**The dashlets require Alfresco 4.0 or greater, plus the [Share OAuth add-on](https://github.com/share-extras/share-oauth), version 2.3.0 or greater.**
 
-The *Twitter Feed dashlet* displays recent Tweets from any public Twitter user, or any public list belonging to a user.
+The *Twitter Feed dashlet* displays recent Tweets from a Twitter user or list of your choice.
 
 ![Twitter Feed Dashlet displaying a user's tweets](screenshots/twitter-timeline-dashlet-user.png)
 
@@ -17,7 +17,7 @@ The *Twitter Search dashlet* displays the results of a Twitter search in real-ti
 
 ![Twiter Search Dashlet](screenshots/twitter-search-dashlet.png)
 
-Last but not least, the *Twitter Timeline dashlet* allows you to connect to Twitter as an authenticated user and view your own Home timeline, mentions, favorites and direct messages.
+Last but not least, the *Twitter Timeline dashlet* allows you to view your own Home timeline, mentions, favorites and direct messages.
 
 ![Twitter Timeline Dashlet](screenshots/twitter-timeline.png)
 
@@ -28,11 +28,14 @@ You can view messages in the dashlet, and the standard _Favorite_, _Reply_ and _
 Installation
 ------------
 
-**Authenticated Twitter access also requires the [Share OAuth extension](https://github.com/share-extras/share-oauth), version 2.2 or greater.**
+**Before installing the dashlets please ensure that you have installed the [Share OAuth extension](https://github.com/share-extras/share-oauth), version 2.3.0 or greater.**
 
-The dashlets are packaged as a single JAR file for easy installation into Alfresco Share.
+The dashlets are packaged inside a single file for easy installation into Alfresco Share. You can choose to install using an AMP file or a JAR file.
 
-To install the dashlets, simply drop the `twitter-dashlets.jar` file into the `tomcat/shared/lib` folder within your Alfresco installation, and restart the application server. You might need to create this folder if it does not already exist.
+  * **To install the AMP file** (recommended), please use Alfresco's [Module Management Tool](http://docs.alfresco.com/4.0/index.jsp?topic=%2Fcom.alfresco.enterprise.doc%2Ftasks%2Famp-install.html).
+
+  * **Or, to install the JAR**, simply drop the `twitter-dashlets-{version}.jar` file into the `tomcat/shared/lib` folder within your Alfresco installation, and restart the application server. You might need to create this folder if it does not already exist. See [Troublshooting](https://github.com/share-extras/share-extras.github.com/wiki/General-Installation#troubleshooting-jar-installation-problems) if you have problems.
+
 
 Building from Source
 --------------------
