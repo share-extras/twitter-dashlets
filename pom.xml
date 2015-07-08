@@ -20,8 +20,22 @@
         <resources>
             <resource>
                 <directory>config</directory>
+		<includes>
+		  <include>alfresco/**/*</include>
+		</includes>
             </resource>
-        </resources>
+            <resource>
+                <directory>config</directory>
+		<targetPath>META-INF</targetPath>
+		<includes>
+		  <include>*.xml</include>
+		</includes>
+            </resource>
+	    <resource>
+	      <targetPath>META-INF</targetPath>
+	      <directory>source/web</directory>
+	    </resource>
+	</resources>  
         <plugins>
             <plugin>
                 <artifactId>maven-war-plugin</artifactId>
